@@ -1,0 +1,159 @@
+---
+interface Props {
+  timestamp: number
+  id?: string
+}
+
+const { timestamp, id = 'hero-countdown' } = Astro.props
+---
+
+<div
+  class="hero-countdown animate-fade-in animate-delay-900"
+  id={id}
+  data-date={timestamp}
+  role="timer"
+  aria-label="Cuenta atrás para La Zurrada del Año"
+>
+  <div class="hero-countdown__block">
+    <span
+      data-timer-days
+      class="timer-value font-cinzel text-2xl tabular-nums sm:text-3xl md:text-4xl">---</span
+    >
+    <span class="hero-countdown__label">DÍAS</span>
+  </div>
+
+  <span class="hero-countdown__separator" aria-hidden="true">:</span>
+
+  <div class="hero-countdown__block">
+    <span
+      data-timer-hours
+      class="timer-value font-cinzel text-2xl tabular-nums sm:text-3xl md:text-4xl">--</span
+    >
+    <span class="hero-countdown__label">HORAS</span>
+  </div>
+
+  <span class="hero-countdown__separator" aria-hidden="true">:</span>
+
+  <div class="hero-countdown__block">
+    <span
+      data-timer-minutes
+      class="timer-value font-cinzel text-2xl tabular-nums sm:text-3xl md:text-4xl">--</span
+    >
+    <span class="hero-countdown__label">MIN</span>
+  </div>
+
+  <span class="hero-countdown__separator" aria-hidden="true">:</span>
+
+  <div class="hero-countdown__block">
+    <span
+      data-timer-seconds
+      class="timer-value font-cinzel text-2xl tabular-nums sm:text-3xl md:text-4xl">--</span
+    >
+    <span class="hero-countdown__label">SEG</span>
+  </div>
+</div>
+
+<script>
+  import createCountdown, { type TimeParts } from '@/lib/countdown'
+
+  const COUNTDOWN_READY_ATTR = 'data-countdown-ready'
+  let activeCountdownController: { stop?: () => void } | null = null
+
+  function initCountdown() {
+    const countdown = document.getElementById('hero-countdown')
+    if (!countdown || countdown.hasAttribute(COUNTDOWN_READY_ATTR)) return
+
+    const daysNode = countdown.querySelector('[data-timer-days]')
+    const hoursNode = countdown.querySelector('[data-timer-hours]')
+    const minutesNode = countdown.querySelector('[data-timer-minutes]')
+    const secondsNode = countdown.querySelector('[data-timer-seconds]')
+
+    const timestamp = Number(countdown.getAttribute('data-date') ?? 0)
+    const controller = createCountdown(timestamp, {
+      onTick({ days, hours, minutes, seconds }: TimeParts) {
+        if (daysNode) daysNode.textContent = days
+        if (hoursNode) hoursNode.textContent = hours
+        if (minutesNode) minutesNode.textContent = minutes
+        if (secondsNode) secondsNode.textContent = seconds
+      },
+      onComplete() {},
+    })
+
+    countdown.setAttribute(COUNTDOWN_READY_ATTR, '')
+    controller.start()
+    activeCountdownController = controller
+  }
+
+  function handlePageLoad() {
+    initCountdown()
+  }
+
+  function handleBeforeSwap() {
+    if (activeCountdownController?.stop) {
+      activeCountdownController.stop()
+    }
+    activeCountdownController = null
+  }
+
+  document.addEventListener('astro:page-load', handlePageLoad)
+  document.addEventListener('astro:before-swap', handleBeforeSwap)
+
+  handlePageLoad()
+</script>
+
+<style>
+  .hero-countdown {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(0.45rem, 1vw, 0.8rem);
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+  }
+
+  .hero-countdown__block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
+  .timer-value {
+    min-width: 1.85em;
+    text-align: center;
+    color: var(--color-zurrada-cream);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-shadow:
+      0 0 30px rgba(200, 169, 108, 0.22),
+      0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .hero-countdown__label {
+    color: rgba(255, 255, 255, 0.46);
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+  }
+
+  .hero-countdown__separator {
+    margin-top: 0.1em;
+    color: rgba(200, 169, 108, 0.28);
+    font-size: clamp(1.3rem, 2vw, 2.2rem);
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  @media (max-width: 639.98px) {
+    .hero-countdown {
+      transform: scale(0.78);
+      transform-origin: center top;
+      margin-top: -0.2rem !important;
+      margin-bottom: -0.4rem !important;
+      gap: 0.25rem 0.45rem;
+    }
+    .hero-countdown__label {
+      letter-spacing: 0.18em;
+    }
+  }
+</style>

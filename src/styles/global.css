@@ -1,0 +1,211 @@
+@import 'tailwindcss';
+@import 'tailwind-animations';
+
+@theme {
+  --font-fallback:
+    system-ui, -apple-system, blinkmacsystemfont, 'Segoe UI', 'Noto Sans', helvetica, arial,
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-cinzel: 'Cinzel';
+
+  --color-zurrada-cream: #f5e5ca;
+  --color-zurrada-gold: #c8a96c;
+  --color-zurrada-midnight: #0b1125;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+@layer base {
+  html,
+  body {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    width: 100%;
+    min-height: 100%;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+  }
+
+  html {
+    scrollbar-gutter: stable;
+    background: var(--color-zurrada-midnight);
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top, rgba(200, 169, 108, 0.12), transparent 30%),
+      var(--color-zurrada-midnight);
+    color: white;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: var(--color-zurrada-midnight);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-zurrada-gold);
+    border-radius: 10px;
+    border: 3px solid var(--color-zurrada-midnight);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-zurrada-cream);
+  }
+
+  * {
+    scrollbar-color: var(--color-zurrada-gold) var(--color-zurrada-midnight);
+    scrollbar-width: thin;
+    box-sizing: border-box;
+  }
+}
+
+@layer utilities {
+  .min-h-screen {
+    min-height: 100svh;
+  }
+
+  .h-screen {
+    height: 100svh;
+  }
+
+  @media (min-width: 768px) {
+    .min-h-screen {
+      min-height: 100vh;
+    }
+
+    .h-screen {
+      height: 100vh;
+    }
+  }
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-extrabold.woff2') format('woff2');
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/cinzel-black.woff2') format('woff2');
+  font-weight: 900;
+  font-display: swap;
+}
+
+html {
+  font-family: 'Cinzel', var(--font-fallback);
+  text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.story-shell {
+  position: relative;
+  min-height: 100svh;
+  isolation: isolate;
+}
+
+.story-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  z-index: 0;
+  overflow: hidden;
+  background: #000;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.story-background__media,
+.story-background__media img {
+  width: 100%;
+  height: 100%;
+}
+
+.story-background__media img {
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.04);
+}
+
+.story-background__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.28) 22%,
+    rgba(0, 0, 0, 0.22) 48%,
+    rgba(0, 0, 0, 0.55) 74%,
+    rgba(0, 0, 0, 0.84) 100%
+  );
+}
+
+.story-background__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  mix-blend-mode: soft-light;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.22) 0 1px, transparent 1px),
+    radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px),
+    radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px);
+  background-size:
+    11px 11px,
+    17px 17px,
+    23px 23px;
+}
+
+.story-content {
+  position: relative;
+  z-index: 1;
+}
+
+.story-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 100svh;
+  padding: clamp(2.5rem, 5vw, 5rem) 0;
+}
+
+.story-panel__inner {
+  width: min(100%, 1280px);
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 2vw, 2rem);
+  display: flex;
+}
+
+.story-panel__inner--full {
+  width: min(100%, 1440px);
+}

@@ -1,0 +1,362 @@
+---
+import ParticipantScene from '@/components/ParticipantScene.astro'
+import { participants } from '@/consts/participants'
+---
+
+<section
+  class="participants-showcase"
+  data-participants-showcase-root
+  aria-labelledby="participants-showcase-title"
+>
+  <h2 id="participants-showcase-title" class="sr-only">Participantes de La Zurrada del Año</h2>
+
+  <div class="participants-showcase__list">
+    {
+      participants.map((participant, index) => (
+        <ParticipantScene
+          participant={participant}
+          index={index}
+          total={participants.length}
+          cardSide={index % 2 === 0 ? 'left' : 'right'}
+        />
+      ))
+    }
+  </div>
+
+  <script>
+    import { initScrollSequences } from '@/lib/scrollSequence'
+
+    type DestroyParticipantsShowcase = (() => void) | null
+    type ParticipantsShowcaseHandler = () => void
+    type ParticipantsShowcaseResponsiveConfig = {
+      nearViewportMargin: string
+      preloadRadius: number
+      signature: 'mobile' | 'tablet' | 'desktop'
+    }
+
+    type ParticipantsShowcaseWindow = Window & {
+      __participantsShowcaseDestroy__?: DestroyParticipantsShowcase
+      __participantsShowcaseMounted__?: boolean
+      __participantsShowcaseEnteredViewport__?: boolean
+      __participantsShowcaseVisibilityObserver__?: IntersectionObserver | null
+      __participantsShowcaseIdleHandle__?: number | null
+      __participantsShowcaseConfigSignature__?: ParticipantsShowcaseResponsiveConfig['signature']
+      __participantsShowcasePageLoadHandler__?: ParticipantsShowcaseHandler
+      __participantsShowcaseBeforeSwapHandler__?: ParticipantsShowcaseHandler
+      __participantsShowcaseResizeHandler__?: ParticipantsShowcaseHandler
+      requestIdleCallback?: (
+        callback: (deadline: IdleDeadline) => void,
+        options?: IdleRequestOptions,
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+
+    const SHOWCASE_ROOT_SELECTOR = '[data-participants-showcase-root]'
+    const SCENE_SELECTOR = '[data-participant-scene]'
+
+    const shouldDebugParticipantsShowcase = () =>
+      window.location.search.includes('debugSequences=1') ||
+      document.documentElement.hasAttribute('data-debug-sequences')
+
+    const participantsWindow = window as ParticipantsShowcaseWindow
+
+    const debugParticipantsShowcase = (phase: string, extra: Record<string, unknown> = {}) => {
+      if (!shouldDebugParticipantsShowcase()) return
+      console.info('[participantsShowcase]', {
+        phase,
+        ...extra,
+      })
+    }
+
+    const scheduleIdle = (callback: () => void) => {
+      if (typeof participantsWindow.requestIdleCallback === 'function') {
+        return participantsWindow.requestIdleCallback(() => callback(), { timeout: 900 })
+      }
+
+      return window.setTimeout(callback, 160)
+    }
+
+    const cancelScheduledIdle = (handle: number | null | undefined) => {
+      if (handle == null) return
+
+      if (typeof participantsWindow.cancelIdleCallback === 'function') {
+        participantsWindow.cancelIdleCallback(handle)
+        return
+      }
+
+      window.clearTimeout(handle)
+    }
+
+    const getShowcaseRoot = () => document.querySelector<HTMLElement>(SHOWCASE_ROOT_SELECTOR)
+
+    const getResponsiveConfig = (): ParticipantsShowcaseResponsiveConfig => {
+      const width = window.innerWidth || document.documentElement.clientWidth || 0
+
+      if (width <= 768) {
+        return {
+          nearViewportMargin: '30% 0px 30% 0px',
+          preloadRadius: 1,
+          signature: 'mobile',
+        }
+      }
+
+      if (width <= 1024) {
+        return {
+          nearViewportMargin: '45% 0px 45% 0px',
+          preloadRadius: 1,
+          signature: 'tablet',
+        }
+      }
+
+      return {
+        nearViewportMargin: '60% 0px 60% 0px',
+        preloadRadius: 1,
+        signature: 'desktop',
+      }
+    }
+
+    const isShowcaseNearViewport = () => {
+      const root = getShowcaseRoot()
+      if (!root) return true
+
+      const rect = root.getBoundingClientRect()
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 1
+
+      return rect.top <= viewportHeight * 1.2 && rect.bottom >= -viewportHeight * 0.2
+    }
+
+    const unmountParticipantsShowcase = () => {
+      try {
+        cancelScheduledIdle(participantsWindow.__participantsShowcaseIdleHandle__)
+        participantsWindow.__participantsShowcaseIdleHandle__ = null
+
+        participantsWindow.__participantsShowcaseDestroy__?.()
+        participantsWindow.__participantsShowcaseDestroy__ = null
+        participantsWindow.__participantsShowcaseMounted__ = false
+        delete participantsWindow.__participantsShowcaseConfigSignature__
+
+        debugParticipantsShowcase('unmount:done')
+      } catch (error) {
+        console.error('[participantsShowcase]', {
+          phase: 'unmount:error',
+          error,
+        })
+      }
+    }
+
+    const mountParticipantsShowcase = () => {
+      try {
+        const roots = document.querySelectorAll(SCENE_SELECTOR)
+        const config = getResponsiveConfig()
+
+        debugParticipantsShowcase('mount:start', {
+          scenes: roots.length,
+          mounted: Boolean(participantsWindow.__participantsShowcaseMounted__),
+          config,
+        })
+
+        if (roots.length === 0) {
+          participantsWindow.__participantsShowcaseMounted__ = false
+          participantsWindow.__participantsShowcaseDestroy__ = null
+          return
+        }
+
+        if (
+          participantsWindow.__participantsShowcaseMounted__ &&
+          participantsWindow.__participantsShowcaseConfigSignature__ === config.signature
+        ) {
+          debugParticipantsShowcase('mount:skip-already-mounted', {
+            scenes: roots.length,
+            config,
+          })
+          return
+        }
+
+        participantsWindow.__participantsShowcaseDestroy__?.()
+
+        participantsWindow.__participantsShowcaseDestroy__ = initScrollSequences({
+          selector: SCENE_SELECTOR,
+          nearViewportMargin: config.nearViewportMargin,
+          preloadRadius: config.preloadRadius,
+        })
+
+        participantsWindow.__participantsShowcaseMounted__ = true
+        participantsWindow.__participantsShowcaseConfigSignature__ = config.signature
+
+        debugParticipantsShowcase('mount:done', {
+          scenes: roots.length,
+          config,
+        })
+      } catch (error) {
+        participantsWindow.__participantsShowcaseMounted__ = false
+        delete participantsWindow.__participantsShowcaseConfigSignature__
+
+        console.error('[participantsShowcase]', {
+          phase: 'mount:error',
+          error,
+        })
+      }
+    }
+
+    const requestMountParticipantsShowcase = () => {
+      if (participantsWindow.__participantsShowcaseMounted__) return
+      if (document.visibilityState === 'hidden') return
+
+      cancelScheduledIdle(participantsWindow.__participantsShowcaseIdleHandle__)
+
+      participantsWindow.__participantsShowcaseIdleHandle__ = scheduleIdle(() => {
+        participantsWindow.__participantsShowcaseIdleHandle__ = null
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            mountParticipantsShowcase()
+          })
+        })
+      })
+
+      debugParticipantsShowcase('mount:scheduled')
+    }
+
+    const disconnectVisibilityObserver = () => {
+      participantsWindow.__participantsShowcaseVisibilityObserver__?.disconnect()
+      participantsWindow.__participantsShowcaseVisibilityObserver__ = null
+    }
+
+    const observeParticipantsShowcase = () => {
+      const root = getShowcaseRoot()
+
+      if (!root) {
+        requestMountParticipantsShowcase()
+        return
+      }
+
+      if (participantsWindow.__participantsShowcaseEnteredViewport__ || isShowcaseNearViewport()) {
+        participantsWindow.__participantsShowcaseEnteredViewport__ = true
+        disconnectVisibilityObserver()
+        requestMountParticipantsShowcase()
+        return
+      }
+
+      if (!('IntersectionObserver' in window)) {
+        participantsWindow.__participantsShowcaseEnteredViewport__ = true
+        requestMountParticipantsShowcase()
+        return
+      }
+
+      disconnectVisibilityObserver()
+
+      participantsWindow.__participantsShowcaseVisibilityObserver__ = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0]
+          if (!entry?.isIntersecting) return
+
+          participantsWindow.__participantsShowcaseEnteredViewport__ = true
+          disconnectVisibilityObserver()
+          requestMountParticipantsShowcase()
+
+          debugParticipantsShowcase('viewport:entered')
+        },
+        {
+          rootMargin: '20% 0px 20% 0px',
+          threshold: 0,
+        },
+      )
+
+      participantsWindow.__participantsShowcaseVisibilityObserver__?.observe(root)
+
+      debugParticipantsShowcase('observer:attached')
+    }
+
+    const handleParticipantsShowcaseResize = () => {
+      const nextConfig = getResponsiveConfig()
+
+      if (participantsWindow.__participantsShowcaseMounted__) {
+        if (participantsWindow.__participantsShowcaseConfigSignature__ !== nextConfig.signature) {
+          debugParticipantsShowcase('resize:remount', {
+            nextConfig,
+          })
+
+          unmountParticipantsShowcase()
+          participantsWindow.__participantsShowcaseEnteredViewport__ = true
+          requestMountParticipantsShowcase()
+        }
+
+        return
+      }
+
+      if (isShowcaseNearViewport()) {
+        participantsWindow.__participantsShowcaseEnteredViewport__ = true
+        requestMountParticipantsShowcase()
+      }
+    }
+
+    const setupParticipantsShowcase = () => {
+      observeParticipantsShowcase()
+    }
+
+    if (participantsWindow.__participantsShowcasePageLoadHandler__) {
+      document.removeEventListener(
+        'astro:page-load',
+        participantsWindow.__participantsShowcasePageLoadHandler__,
+      )
+    }
+
+    if (participantsWindow.__participantsShowcaseBeforeSwapHandler__) {
+      document.removeEventListener(
+        'astro:before-swap',
+        participantsWindow.__participantsShowcaseBeforeSwapHandler__,
+      )
+    }
+
+    if (participantsWindow.__participantsShowcaseResizeHandler__) {
+      window.removeEventListener('resize', participantsWindow.__participantsShowcaseResizeHandler__)
+    }
+
+    participantsWindow.__participantsShowcasePageLoadHandler__ = setupParticipantsShowcase
+    participantsWindow.__participantsShowcaseBeforeSwapHandler__ = () => {
+      disconnectVisibilityObserver()
+      unmountParticipantsShowcase()
+      participantsWindow.__participantsShowcaseEnteredViewport__ = false
+    }
+    participantsWindow.__participantsShowcaseResizeHandler__ = handleParticipantsShowcaseResize
+
+    document.addEventListener(
+      'astro:page-load',
+      participantsWindow.__participantsShowcasePageLoadHandler__,
+    )
+    document.addEventListener(
+      'astro:before-swap',
+      participantsWindow.__participantsShowcaseBeforeSwapHandler__,
+    )
+    window.addEventListener('resize', participantsWindow.__participantsShowcaseResizeHandler__, {
+      passive: true,
+    })
+
+    setupParticipantsShowcase()
+  </script>
+</section>
+
+<style>
+  .participants-showcase {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    padding-block: clamp(0.5rem, 1.4vw, 1rem) clamp(3rem, 7vw, 5rem);
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 3200px;
+  }
+
+  .participants-showcase__list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  @media (max-width: 639.98px) {
+    .participants-showcase {
+      padding-top: 0.25rem;
+      contain-intrinsic-size: 1px 4200px;
+    }
+  }
+</style>

@@ -1,0 +1,137 @@
+---
+import { ClientRouter } from 'astro:transitions'
+import Analytics from '@vercel/analytics/astro'
+
+import '@/styles/global.css'
+import { fixedTitle } from '@/consts/pageTitles'
+
+interface Props {
+  title?: string
+  description?: string
+  canonical?: string
+  robots?: string
+}
+
+const siteUrl = Astro.site ?? Astro.url.origin
+
+const {
+  title = fixedTitle,
+  description = 'Evento de boxeo aficionado entre creadores de contenido, desarrollado por Javier Valdés',
+  canonical,
+  robots = 'index, follow',
+} = Astro.props
+
+const currentPath = Astro.url.pathname
+const resolvedCanonical = canonical
+  ? new URL(canonical, siteUrl).toString()
+  : new URL(currentPath, siteUrl).toString()
+const socialImageUrl = new URL('/og.jpg', siteUrl).toString()
+
+const eventSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SportsEvent',
+  name: 'La Zurrada del Año',
+  description: description,
+  image: socialImageUrl,
+  url: resolvedCanonical,
+  startDate: '2026-10-31T20:00:00+01:00',
+  endDate: '2026-11-01T01:00:00+01:00',
+  eventStatus: 'https://schema.org/EventScheduled',
+  eventAttendanceMode: 'https://schema.org/MixedEventAttendanceMode',
+  inLanguage: 'es-ES',
+  location: {
+    '@type': 'Place',
+    name: 'Arena Código',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Madrid',
+      addressRegion: 'Comunidad de Madrid',
+      addressCountry: 'ES',
+    },
+  },
+  organizer: {
+    '@type': 'Person',
+    name: 'Javier Valdés',
+    url: 'https://github.com/javier-valdes',
+  },
+  competitor: {
+    '@type': 'PerformingGroup',
+    name: 'Creadores de contenido',
+  },
+}
+---
+
+<!doctype html>
+<html lang="es" dir="ltr">
+  <head>
+    <!-- Identidad y Configuración Básica -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <title>{title}</title>
+    <meta name="theme-color" content="#0a1024" />
+
+    <!-- SEO Básico -->
+    <meta name="description" content={description} />
+    <meta name="author" content="Javier Valdés" />
+    <meta name="robots" content={robots} />
+    <link rel="canonical" href={resolvedCanonical} />
+
+    <!-- Favicons y PWA -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Preloads para Performance (LCP) -->
+    <link
+      rel="preload"
+      href="/fonts/cinzel-regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link rel="preload" href="/background.avif" as="image" type="image/avif" fetchpriority="high" />
+    <link rel="preload" href="/logo.avif" as="image" type="image/avif" fetchpriority="high" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:site_name" content="La Zurrada del Año" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={resolvedCanonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="La Zurrada del Año — Evento de boxeo" />
+    <meta property="og:locale" content="es_ES" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content="Banner de La Zurrada del Año" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(eventSchema)} />
+
+    <!-- Integraciones Astro -->
+    <ClientRouter />
+    <Analytics />
+  </head>
+
+  <body>
+    <a
+      href="#main-content"
+      class="absolute -top-full left-4 z-[999] rounded-lg bg-white px-5 py-3 font-bold text-black transition-all outline-none focus:top-4 focus:ring-4 focus:ring-blue-500"
+    >
+      Ir directamente al contenido
+    </a>
+
+    <main id="main-content">
+      <slot />
+    </main>
+  </body>
+</html>

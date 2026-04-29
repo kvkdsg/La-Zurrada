@@ -1,0 +1,37 @@
+---
+import Layout from '@/layouts/Layout.astro'
+import Hero from '@/sections/Hero.astro'
+import ParticipantsShowcase from '@/sections/ParticipantsShowcase.astro'
+
+const title = 'La Zurrada del Año - Evento de boxeo de creadores de contenido'
+const description =
+  'La Zurrada del Año. 31 de octubre, 20:00h CET. Evento de boxeo entre creadores de contenido, plantilla por Javier Valdés.'
+
+export const prerender = true
+---
+
+<Layout title={title} description={description}>
+  <div class="story-shell">
+    <div class="story-background" aria-hidden="true">
+      <picture class="story-background__media">
+        <source srcset="/background.avif" type="image/avif" />
+        <source srcset="/background.webp" type="image/webp" />
+        <img
+          src="/background.webp"
+          alt=""
+          role="presentation"
+          fetchpriority="high"
+          decoding="async"
+        />
+      </picture>
+
+      <div class="story-background__veil"></div>
+      <div class="story-background__grain"></div>
+    </div>
+
+    <div class="story-content" data-story-root>
+      <Hero />
+      <ParticipantsShowcase />
+    </div>
+  </div>
+</Layout>

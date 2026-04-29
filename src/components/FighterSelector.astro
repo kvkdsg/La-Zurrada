@@ -1,0 +1,1131 @@
+---
+import { defaultHeroMatchupId, heroMatchups, type HeroMatchupRecord } from '@/consts/participants'
+
+interface Props {
+  id?: string
+  title?: string
+  eyebrow?: string
+  eventName?: string
+  defaultMatchupId?: string
+}
+
+interface SelectorCard {
+  id: string
+  matchupId: string
+  participantId: string
+  opponentId: string
+  name: string
+  opponentName: string
+  poster: string
+  accent: string
+  fightOrder: number
+  fightLabel: string
+  boutTier: string
+  logicalRow: number
+  logicalCol: number
+  gridRow: number
+  gridCol: number
+  lane: 'top' | 'bottom'
+}
+
+const {
+  id = 'hero-fighter-selector',
+  title = 'Selector de luchadores',
+  eyebrow = 'Selecciona un combate',
+  eventName = 'hero:matchup-change',
+  defaultMatchupId = defaultHeroMatchupId,
+} = Astro.props
+
+const orderedMatchups: HeroMatchupRecord[] = [...heroMatchups].sort(
+  (a, b) => a.fightOrder - b.fightOrder,
+)
+
+if (orderedMatchups.length !== 10) {
+  throw new Error(
+    `[FighterSelector.astro] Expected exactly 10 matchups, received ${orderedMatchups.length}.`,
+  )
+}
+
+const initialMatchup =
+  orderedMatchups.find((matchup) => matchup.matchupId === defaultMatchupId) ??
+  orderedMatchups.at(-1)
+
+if (!initialMatchup) {
+  throw new Error('[FighterSelector.astro] No matchups available to render the selector.')
+}
+
+const topCards: SelectorCard[] = orderedMatchups.map((matchup, index) => ({
+  id: `${id}-top-${matchup.top.participantId}`,
+  matchupId: matchup.matchupId,
+  participantId: matchup.top.participantId,
+  opponentId: matchup.bottom.participantId,
+  name: matchup.top.name,
+  opponentName: matchup.bottom.name,
+  poster: matchup.top.selectorPoster,
+  accent: matchup.top.accent,
+  fightOrder: matchup.fightOrder,
+  fightLabel: matchup.fightLabel,
+  boutTier: matchup.boutTier,
+  logicalRow: index < 5 ? 0 : 1,
+  logicalCol: index % 5,
+  gridRow: index < 5 ? 1 : 2,
+  gridCol: (index % 5) + 1,
+  lane: 'top',
+}))
+
+const bottomCards: SelectorCard[] = orderedMatchups.map((matchup, index) => ({
+  id: `${id}-bottom-${matchup.bottom.participantId}`,
+  matchupId: matchup.matchupId,
+  participantId: matchup.bottom.participantId,
+  opponentId: matchup.top.participantId,
+  name: matchup.bottom.name,
+  opponentName: matchup.top.name,
+  poster: matchup.bottom.selectorPoster,
+  accent: matchup.bottom.accent,
+  fightOrder: matchup.fightOrder,
+  fightLabel: matchup.fightLabel,
+  boutTier: matchup.boutTier,
+  logicalRow: index < 5 ? 2 : 3,
+  logicalCol: index % 5,
+  gridRow: index < 5 ? 4 : 5,
+  gridCol: (index % 5) + 1,
+  lane: 'bottom',
+}))
+
+const selectorCards = [...topCards, ...bottomCards]
+
+const payload = {
+  eventName,
+  defaultMatchupId: initialMatchup.matchupId,
+  matchups: orderedMatchups.map((matchup) => ({
+    matchupId: matchup.matchupId,
+    fightOrder: matchup.fightOrder,
+    fightLabel: matchup.fightLabel,
+    boutTier: matchup.boutTier,
+    top: {
+      participantId: matchup.top.participantId,
+      name: matchup.top.name,
+      accent: matchup.top.accent,
+      poster: matchup.top.selectorPoster,
+    },
+    bottom: {
+      participantId: matchup.bottom.participantId,
+      name: matchup.bottom.name,
+      accent: matchup.bottom.accent,
+      poster: matchup.bottom.selectorPoster,
+    },
+    left: {
+      participantId: matchup.left.participantId,
+      name: matchup.left.name,
+      accent: matchup.left.accent,
+      poster: matchup.left.selectorPoster,
+    },
+    right: {
+      participantId: matchup.right.participantId,
+      name: matchup.right.name,
+      accent: matchup.right.accent,
+      poster: matchup.right.selectorPoster,
+    },
+  })),
+}
+---
+
+<section
+  id={id}
+  class="fighter-selector"
+  data-fighter-selector
+  data-eyebrow={eyebrow}
+  data-selected-matchup-id={initialMatchup.matchupId}
+  aria-label={title}
+>
+  <div class="fighter-selector__panel">
+    <div class="fighter-selector__board-wrap">
+      <div class="fighter-selector__board" role="group" aria-label="Selector visual de combates">
+        <div
+          class="fighter-selector__board-glow fighter-selector__board-glow--top"
+          aria-hidden="true"
+        >
+        </div>
+        <div
+          class="fighter-selector__board-glow fighter-selector__board-glow--bottom"
+          aria-hidden="true"
+        >
+        </div>
+
+        <div class="fighter-selector__arena" data-fighter-selector-grid>
+          {
+            selectorCards.map((card) => {
+              const isSelected = card.matchupId === initialMatchup.matchupId
+
+              return (
+                <button
+                  id={card.id}
+                  type="button"
+                  class:list={[
+                    'fighter-selector__card',
+                    card.lane === 'top'
+                      ? 'fighter-selector__card--top'
+                      : 'fighter-selector__card--bottom',
+                    isSelected && 'is-selected',
+                  ]}
+                  data-fighter-selector-button
+                  data-matchup-id={card.matchupId}
+                  data-participant-id={card.participantId}
+                  data-opponent-id={card.opponentId}
+                  data-nav-row={card.logicalRow}
+                  data-nav-col={card.logicalCol}
+                  data-fight-order={card.fightOrder}
+                  aria-pressed={isSelected ? 'true' : 'false'}
+                  aria-label={`${card.name}. Rival: ${card.opponentName}. ${card.fightLabel}.`}
+                  style={`--fighter-accent:${card.accent};--fighter-grid-row:${card.gridRow};--fighter-grid-col:${card.gridCol};`}
+                >
+                  <span class="fighter-selector__card-ring" aria-hidden="true" />
+
+                  <span class="fighter-selector__card-photo-wrap" aria-hidden="true">
+                    <img
+                      src={card.poster}
+                      alt=""
+                      class="fighter-selector__card-photo"
+                      width="400"
+                      height="400"
+                      loading={isSelected ? 'eager' : 'lazy'}
+                      decoding="async"
+                    />
+                  </span>
+
+                  <span class="fighter-selector__card-meta">
+                    <span class="fighter-selector__card-order">
+                      {String(card.fightOrder).padStart(2, '0')}
+                    </span>
+                    <span class="fighter-selector__card-name">{card.name}</span>
+                  </span>
+                </button>
+              )
+            })
+          }
+
+          <div class="fighter-selector__vs" aria-hidden="true">
+            <span class="fighter-selector__vs-core">VS</span>
+            <span class="fighter-selector__vs-orbit fighter-selector__vs-orbit--left"></span>
+            <span class="fighter-selector__vs-orbit fighter-selector__vs-orbit--right"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script
+    is:inline
+    type="application/json"
+    data-fighter-selector-payload
+    set:html={JSON.stringify(payload)}
+  />
+
+  <script>
+    type FighterSelectionDetail = {
+      participantId: string
+      name: string
+      accent: string
+      poster: string
+    }
+
+    type MatchupDetail = {
+      matchupId: string
+      fightOrder: number
+      fightLabel: string
+      boutTier: string
+      top: FighterSelectionDetail
+      bottom: FighterSelectionDetail
+      left: FighterSelectionDetail
+      right: FighterSelectionDetail
+    }
+
+    type SelectorPayload = {
+      eventName: string
+      defaultMatchupId: string
+      matchups: MatchupDetail[]
+    }
+
+    type SelectorRootState = HTMLElement & {
+      __fighterSelectorCleanup__?: () => void
+    }
+
+    type SelectorWindowState = Window & {
+      __fighterSelectorPageLoadHandler__?: () => void
+      __fighterSelectorBeforeSwapHandler__?: () => void
+    }
+
+    const SELECTOR_READY_ATTR = 'data-fighter-selector-ready'
+    const FIGHTER_SELECTOR_BUTTON = '[data-fighter-selector-button]'
+
+    const setTextContent = (node: HTMLElement | null, value: string) => {
+      if (!node || node.textContent === value) return
+      node.textContent = value
+    }
+
+    const setPressedState = (button: HTMLButtonElement, isSelected: boolean) => {
+      const nextPressed = isSelected ? 'true' : 'false'
+
+      if (button.getAttribute('aria-pressed') !== nextPressed) {
+        button.setAttribute('aria-pressed', nextPressed)
+      }
+
+      if (button.classList.contains('is-selected') !== isSelected) {
+        button.classList.toggle('is-selected', isSelected)
+      }
+    }
+
+    const focusButton = (button: HTMLButtonElement | undefined) => {
+      if (!button) return
+
+      try {
+        button.focus({ preventScroll: true })
+      } catch {
+        button.focus()
+      }
+    }
+
+    const initFighterSelector = (root: SelectorRootState) => {
+      if (root.getAttribute(SELECTOR_READY_ATTR) === 'true') return
+      root.setAttribute(SELECTOR_READY_ATTR, 'true')
+
+      const payloadNode = root.querySelector<HTMLScriptElement>('[data-fighter-selector-payload]')
+      const statusTierNode = root.querySelector<HTMLElement>('[data-fighter-selector-status-tier]')
+      const statusLabelNode = root.querySelector<HTMLElement>(
+        '[data-fighter-selector-status-label]',
+      )
+      const liveNode = root.querySelector<HTMLElement>('[data-fighter-selector-live]')
+      const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>(FIGHTER_SELECTOR_BUTTON))
+
+      const payloadText = payloadNode?.textContent?.trim()
+      const payload = payloadText ? (JSON.parse(payloadText) as SelectorPayload) : null
+
+      if (!payload || buttons.length === 0) {
+        throw new Error('[FighterSelector.astro] Invalid runtime payload or DOM structure.')
+      }
+
+      const matchupMap = new Map(
+        payload.matchups.map((matchup) => [matchup.matchupId, matchup] as const),
+      )
+
+      const coordinateMap = new Map(
+        buttons.map(
+          (button) => [`${button.dataset['navRow']}:${button.dataset['navCol']}`, button] as const,
+        ),
+      )
+
+      const buttonsByMatchupId = buttons.reduce<Map<string, HTMLButtonElement[]>>(
+        (accumulator, button) => {
+          const matchupId = button.dataset['matchupId']
+          if (!matchupId) return accumulator
+
+          const currentGroup = accumulator.get(matchupId)
+          if (currentGroup) {
+            currentGroup.push(button)
+          } else {
+            accumulator.set(matchupId, [button])
+          }
+
+          return accumulator
+        },
+        new Map(),
+      )
+
+      let activeMatchupId: string | null = root.dataset['selectedMatchupId'] ?? null
+
+      let selectionRaf = 0
+      let pendingMatchupId: string | null = null
+      let pendingParticipantId: string | null = null
+
+      const updateStatus = (matchup: MatchupDetail) => {
+        setTextContent(statusTierNode, matchup.boutTier)
+        setTextContent(statusLabelNode, matchup.fightLabel)
+      }
+
+      const syncAllButtons = (matchupId: string) => {
+        buttons.forEach((button) => {
+          setPressedState(button, button.dataset['matchupId'] === matchupId)
+        })
+      }
+
+      const updateButtons = (matchupId: string) => {
+        if (root.dataset['selectedMatchupId'] !== matchupId) {
+          root.dataset['selectedMatchupId'] = matchupId
+        }
+
+        if (!activeMatchupId) {
+          syncAllButtons(matchupId)
+          activeMatchupId = matchupId
+          return
+        }
+
+        if (activeMatchupId === matchupId) {
+          return
+        }
+
+        const previousButtons = buttonsByMatchupId.get(activeMatchupId)
+        const nextButtons = buttonsByMatchupId.get(matchupId)
+
+        if (!previousButtons || !nextButtons) {
+          syncAllButtons(matchupId)
+          activeMatchupId = matchupId
+          return
+        }
+
+        previousButtons.forEach((button) => setPressedState(button, false))
+        nextButtons.forEach((button) => setPressedState(button, true))
+
+        activeMatchupId = matchupId
+      }
+
+      const emitSelection = (matchup: MatchupDetail, sourceParticipantId: string | null) => {
+        const detail = {
+          matchupId: matchup.matchupId,
+          fightOrder: matchup.fightOrder,
+          fightLabel: matchup.fightLabel,
+          boutTier: matchup.boutTier,
+          selectedParticipantId: sourceParticipantId,
+          topParticipant: matchup.top,
+          bottomParticipant: matchup.bottom,
+          leftParticipant: matchup.left,
+          rightParticipant: matchup.right,
+          participants: [matchup.top, matchup.bottom],
+        }
+
+        root.dispatchEvent(
+          new CustomEvent(payload.eventName, {
+            bubbles: true,
+            composed: true,
+            detail,
+          }),
+        )
+
+        window.dispatchEvent(
+          new CustomEvent(payload.eventName, {
+            detail,
+          }),
+        )
+      }
+
+      const applySelection = (
+        matchupId: string,
+        options: { announce?: boolean; sourceParticipantId?: string | null } = {},
+      ) => {
+        const matchup = matchupMap.get(matchupId)
+        if (!matchup) return
+
+        updateButtons(matchup.matchupId)
+        updateStatus(matchup)
+
+        if (options.announce !== false && liveNode) {
+          const nextMessage = `Combate activo: ${matchup.fightLabel}`
+          if (liveNode.textContent !== nextMessage) {
+            liveNode.textContent = nextMessage
+          }
+        }
+
+        emitSelection(matchup, options.sourceParticipantId ?? null)
+      }
+
+      const scheduleSelection = (matchupId: string, participantId?: string | null) => {
+        updateButtons(matchupId)
+
+        pendingMatchupId = matchupId
+        pendingParticipantId = participantId ?? null
+
+        if (selectionRaf) return
+
+        selectionRaf = requestAnimationFrame(() => {
+          selectionRaf = 0
+          const nextId = pendingMatchupId
+          const nextParticipant = pendingParticipantId
+          pendingMatchupId = null
+          pendingParticipantId = null
+
+          if (!nextId) return
+          applySelection(nextId, {
+            announce: true,
+            sourceParticipantId: nextParticipant,
+          })
+        })
+      }
+
+      const focusByCoordinates = (row: number, col: number) => {
+        focusButton(coordinateMap.get(`${row}:${col}`))
+      }
+
+      const getNextColumn = (currentCol: number, delta: number) => {
+        const columnCount = 5
+        return (currentCol + delta + columnCount) % columnCount
+      }
+
+      const getNextRow = (currentRow: number, delta: number) => {
+        const rowCount = 4
+        return (currentRow + delta + rowCount) % rowCount
+      }
+
+      const handleClick = (event: Event) => {
+        if (root.getAttribute('data-busy') === 'true') return
+
+        const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+          FIGHTER_SELECTOR_BUTTON,
+        )
+        if (!button || !root.contains(button)) return
+
+        const matchupId = button.dataset['matchupId']
+        const participantId = button.dataset['participantId']
+
+        if (!matchupId) return
+
+        scheduleSelection(matchupId, participantId)
+      }
+
+      const handleKeydown = (event: KeyboardEvent) => {
+        if (root.getAttribute('data-busy') === 'true') return
+
+        const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+          FIGHTER_SELECTOR_BUTTON,
+        )
+        if (!button || !root.contains(button)) return
+
+        const row = Number(button.dataset['navRow'] ?? 0)
+        const col = Number(button.dataset['navCol'] ?? 0)
+
+        switch (event.key) {
+          case 'ArrowLeft': {
+            event.preventDefault()
+            focusByCoordinates(row, getNextColumn(col, -1))
+            break
+          }
+
+          case 'ArrowRight': {
+            event.preventDefault()
+            focusByCoordinates(row, getNextColumn(col, 1))
+            break
+          }
+
+          case 'ArrowUp': {
+            event.preventDefault()
+            focusByCoordinates(getNextRow(row, -1), col)
+            break
+          }
+
+          case 'ArrowDown': {
+            event.preventDefault()
+            focusByCoordinates(getNextRow(row, 1), col)
+            break
+          }
+
+          case 'Home': {
+            event.preventDefault()
+            focusByCoordinates(row, 0)
+            break
+          }
+
+          case 'End': {
+            event.preventDefault()
+            focusByCoordinates(row, 4)
+            break
+          }
+
+          case 'Enter':
+          case ' ': {
+            event.preventDefault()
+
+            const matchupId = button.dataset['matchupId']
+            const participantId = button.dataset['participantId']
+
+            if (!matchupId) return
+
+            scheduleSelection(matchupId, participantId)
+            break
+          }
+        }
+      }
+
+      root.addEventListener('click', handleClick)
+      root.addEventListener('keydown', handleKeydown)
+
+      root.__fighterSelectorCleanup__ = () => {
+        root.removeEventListener('click', handleClick)
+        root.removeEventListener('keydown', handleKeydown)
+        root.removeAttribute(SELECTOR_READY_ATTR)
+        if (selectionRaf) {
+          cancelAnimationFrame(selectionRaf)
+          selectionRaf = 0
+        }
+      }
+
+      applySelection(payload.defaultMatchupId, {
+        announce: false,
+        sourceParticipantId: null,
+      })
+    }
+
+    const initAllFighterSelectors = () => {
+      document
+        .querySelectorAll<SelectorRootState>('[data-fighter-selector]')
+        .forEach(initFighterSelector)
+    }
+
+    const destroyAllFighterSelectors = () => {
+      document.querySelectorAll<SelectorRootState>('[data-fighter-selector]').forEach((root) => {
+        root.__fighterSelectorCleanup__?.()
+        delete root.__fighterSelectorCleanup__
+      })
+    }
+
+    const selectorWindow = window as SelectorWindowState
+
+    if (selectorWindow.__fighterSelectorPageLoadHandler__) {
+      document.removeEventListener(
+        'astro:page-load',
+        selectorWindow.__fighterSelectorPageLoadHandler__,
+      )
+    }
+
+    if (selectorWindow.__fighterSelectorBeforeSwapHandler__) {
+      document.removeEventListener(
+        'astro:before-swap',
+        selectorWindow.__fighterSelectorBeforeSwapHandler__,
+      )
+    }
+
+    const handleSelectorPageLoad = () => {
+      initAllFighterSelectors()
+    }
+
+    const handleSelectorBeforeSwap = () => {
+      destroyAllFighterSelectors()
+    }
+
+    selectorWindow.__fighterSelectorPageLoadHandler__ = handleSelectorPageLoad
+    selectorWindow.__fighterSelectorBeforeSwapHandler__ = handleSelectorBeforeSwap
+
+    document.addEventListener('astro:page-load', handleSelectorPageLoad)
+    document.addEventListener('astro:before-swap', handleSelectorBeforeSwap)
+
+    handleSelectorPageLoad()
+  </script>
+</section>
+
+<style>
+  .fighter-selector {
+    --fighter-selector-panel-bg:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+      linear-gradient(135deg, rgba(8, 12, 28, 0.9), rgba(7, 11, 24, 0.78));
+    --fighter-selector-panel-border: rgba(255, 255, 255, 0.1);
+    --fighter-selector-panel-shadow:
+      0 24px 64px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --fighter-selector-board-radius: 1.25rem;
+    --fighter-selector-card-radius: 0.92rem;
+    --fighter-selector-track-gold: rgba(200, 169, 108, 0.14);
+    --fighter-selector-track-blue: rgba(142, 167, 255, 0.14);
+    --fighter-selector-gap: 0.42rem;
+    --fighter-selector-card-padding: 0.34rem;
+    --fighter-selector-card-gap: 0.26rem;
+    --fighter-selector-vs-size: 2.8rem;
+    --fighter-selector-vs-row-height: 1.9rem;
+    --fighter-selector-order-size: 0.48rem;
+    --fighter-selector-name-size: 0.58rem;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    pointer-events: auto;
+    isolation: isolate;
+  }
+
+  .fighter-selector,
+  .fighter-selector *,
+  .fighter-selector *::before,
+  .fighter-selector *::after {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  .fighter-selector__panel {
+    position: relative;
+    display: grid;
+    gap: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow: visible;
+  }
+
+  .fighter-selector__panel::before,
+  .fighter-selector__panel::after {
+    content: none;
+  }
+
+  .fighter-selector__board-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    padding-bottom: 0;
+    scrollbar-width: none;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .fighter-selector__board-wrap::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fighter-selector__board {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.42rem;
+    border-radius: var(--fighter-selector-board-radius);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+      rgba(6, 10, 22, 0.34);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.015);
+    overflow: hidden;
+  }
+
+  .fighter-selector__board::before,
+  .fighter-selector__board::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .fighter-selector__board::before {
+    background:
+      linear-gradient(to right, transparent 0%, rgba(255, 255, 255, 0.04) 50%, transparent 100%),
+      linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%);
+    opacity: 0.5;
+  }
+
+  .fighter-selector__board::after {
+    background:
+      linear-gradient(
+        to right,
+        transparent 0,
+        var(--fighter-selector-track-gold) 50%,
+        transparent 100%
+      ),
+      linear-gradient(
+        to right,
+        transparent 0,
+        var(--fighter-selector-track-blue) 50%,
+        transparent 100%
+      );
+    background-size:
+      18% 1px,
+      18% 1px;
+    background-position:
+      10% 24%,
+      90% 76%;
+    background-repeat: no-repeat;
+    opacity: 0.4;
+  }
+
+  .fighter-selector__board-glow {
+    display: none;
+  }
+
+  .fighter-selector__arena {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr)) auto repeat(2, minmax(0, 1fr));
+    gap: var(--fighter-selector-gap);
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .fighter-selector__vs {
+    position: relative;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: grid;
+    place-items: center;
+    min-height: var(--fighter-selector-vs-row-height);
+    pointer-events: none;
+  }
+
+  .fighter-selector__vs-core {
+    position: relative;
+    z-index: 2;
+    display: inline-grid;
+    place-items: center;
+    width: var(--fighter-selector-vs-size);
+    height: var(--fighter-selector-vs-size);
+    min-width: 0;
+    min-height: 0;
+    padding: 0.2rem 0.35rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(15, 24, 52, 0.88), rgba(9, 15, 34, 0.78));
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: clamp(0.68rem, 2.2vw, 0.92rem);
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  }
+
+  .fighter-selector__vs-orbit {
+    position: absolute;
+    top: 50%;
+    width: calc(50% - (var(--fighter-selector-vs-size) * 0.62));
+    height: 1px;
+    opacity: 0.48;
+    transform: translateY(-50%);
+  }
+
+  .fighter-selector__vs-orbit--left {
+    left: 0;
+    background: linear-gradient(to right, transparent, rgba(200, 169, 108, 0.22), transparent);
+  }
+
+  .fighter-selector__vs-orbit--right {
+    right: 0;
+    background: linear-gradient(to left, transparent, rgba(142, 167, 255, 0.22), transparent);
+  }
+
+  .fighter-selector__card {
+    --fighter-accent: #ffffff;
+    position: relative;
+    grid-column: var(--fighter-grid-col);
+    grid-row: var(--fighter-grid-row);
+    display: grid;
+    gap: var(--fighter-selector-card-gap);
+    align-content: end;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+    padding: var(--fighter-selector-card-padding);
+    border: 1px solid color-mix(in srgb, var(--fighter-accent) 24%, rgba(255, 255, 255, 0.08));
+    border-radius: var(--fighter-selector-card-radius);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)),
+      linear-gradient(180deg, rgba(10, 16, 36, 0.82), rgba(7, 11, 24, 0.72));
+    box-shadow:
+      0 10px 22px rgba(0, 0, 0, 0.16),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    text-align: left;
+    overflow: hidden;
+    isolation: isolate;
+    contain: layout paint;
+    transform: translateY(0) scale(1);
+    transition:
+      transform 220ms ease,
+      border-color 220ms ease,
+      opacity 220ms ease;
+  }
+
+  .fighter-selector__card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        circle at 50% 10%,
+        color-mix(in srgb, var(--fighter-accent) 10%, transparent),
+        transparent 42%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.008) 24%,
+        transparent 100%
+      );
+    opacity: 0.8;
+  }
+
+  .fighter-selector__card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--fighter-accent) 40%, transparent);
+  }
+
+  .fighter-selector__card:focus-visible {
+    outline: none;
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--fighter-accent) 56%, white);
+  }
+
+  .fighter-selector__card.is-selected {
+    border-color: color-mix(in srgb, var(--fighter-accent) 58%, white);
+    transform: translateY(-3px) scale(1.01);
+  }
+
+  .fighter-selector__card-ring {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    border-radius: inherit;
+    border: 1px solid transparent;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.016);
+  }
+
+  .fighter-selector__card.is-selected .fighter-selector__card-ring {
+    border-color: color-mix(in srgb, var(--fighter-accent) 22%, transparent);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.028);
+  }
+
+  .fighter-selector__card-photo-wrap {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 0.8;
+    border-radius: calc(var(--fighter-selector-card-radius) - 0.18rem);
+    overflow: hidden;
+    background:
+      radial-gradient(
+        circle at 50% 22%,
+        color-mix(in srgb, var(--fighter-accent) 14%, transparent),
+        transparent 54%
+      ),
+      linear-gradient(180deg, rgba(9, 14, 32, 0.72), rgba(5, 9, 19, 0.9));
+  }
+
+  .fighter-selector__card-photo-wrap::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 32%;
+    background: linear-gradient(to top, rgba(6, 10, 22, 0.72), transparent);
+    pointer-events: none;
+  }
+
+  .fighter-selector__card-photo {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    transform: scale(1.02);
+    transition:
+      transform 260ms ease,
+      opacity 260ms ease;
+  }
+
+  .fighter-selector__card:hover .fighter-selector__card-photo,
+  .fighter-selector__card:focus-visible .fighter-selector__card-photo,
+  .fighter-selector__card.is-selected .fighter-selector__card-photo {
+    transform: scale(1.04);
+  }
+
+  .fighter-selector__card-meta {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+
+  .fighter-selector__card-order {
+    color: color-mix(in srgb, var(--fighter-accent) 68%, white);
+    font-size: var(--fighter-selector-order-size);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .fighter-selector__card-name {
+    display: -webkit-box;
+    overflow: hidden;
+    color: white;
+    font-size: var(--fighter-selector-name-size);
+    font-weight: 800;
+    letter-spacing: 0.015em;
+    line-height: 1.06;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+  }
+
+  .fighter-selector__helper {
+    display: none;
+  }
+
+  /* 
+   ===========================================================
+   FEEDBACK PREMIUM: Indicador Visual asíncrono interactivo
+   ===========================================================
+  */
+  .fighter-selector[data-busy='true'] .fighter-selector__card:not(.is-selected) {
+    opacity: 0.6;
+    transition-duration: 100ms;
+  }
+
+  .fighter-selector[data-busy='true'] .fighter-selector__card {
+    cursor: wait;
+  }
+
+  @media (min-width: 28rem) {
+    .fighter-selector {
+      --fighter-selector-board-radius: 1.35rem;
+      --fighter-selector-card-radius: 1rem;
+      --fighter-selector-gap: 0.5rem;
+      --fighter-selector-card-padding: 0.4rem;
+      --fighter-selector-card-gap: 0.32rem;
+      --fighter-selector-vs-size: 3.2rem;
+      --fighter-selector-vs-row-height: 2.2rem;
+      --fighter-selector-order-size: 0.52rem;
+      --fighter-selector-name-size: 0.66rem;
+    }
+
+    .fighter-selector__board {
+      padding: 0.52rem;
+    }
+
+    .fighter-selector__card {
+      aspect-ratio: 0.96 / 1;
+    }
+
+    .fighter-selector__card-photo-wrap {
+      aspect-ratio: 0.92 / 1;
+    }
+  }
+
+  @media (min-width: 42rem) {
+    .fighter-selector {
+      --fighter-selector-board-radius: 1.5rem;
+      --fighter-selector-card-radius: 1.08rem;
+      --fighter-selector-gap: 0.62rem;
+      --fighter-selector-card-padding: 0.48rem;
+      --fighter-selector-card-gap: 0.42rem;
+      --fighter-selector-vs-size: 3.8rem;
+      --fighter-selector-vs-row-height: 2.7rem;
+      --fighter-selector-order-size: 0.56rem;
+      --fighter-selector-name-size: 0.76rem;
+    }
+
+    .fighter-selector__board {
+      padding: 0.66rem;
+    }
+
+    .fighter-selector__card {
+      aspect-ratio: 0.9 / 1;
+    }
+
+    .fighter-selector__card-photo-wrap {
+      aspect-ratio: 0.88 / 1;
+    }
+  }
+
+  @media (max-width: 639.98px) {
+    .fighter-selector {
+      --fighter-selector-board-radius: 0.35rem;
+      --fighter-selector-card-radius: 0.25rem;
+
+      --fighter-selector-gap: 0.15rem !important;
+      --fighter-selector-card-padding: 0.15rem 0.1rem !important;
+      --fighter-selector-card-gap: 0.1rem !important;
+
+      --fighter-selector-vs-size: 1.6rem;
+      --fighter-selector-vs-row-height: 1.1rem;
+
+      --fighter-selector-name-size: 9px !important;
+    }
+
+    .fighter-selector__board {
+      padding: 0.15rem !important;
+      border-radius: var(--fighter-selector-board-radius);
+    }
+
+    .fighter-selector__vs-core {
+      letter-spacing: 0.05em;
+      font-size: 0.4rem;
+      padding: 0.08rem 0.16rem;
+    }
+
+    .fighter-selector__card {
+      aspect-ratio: 1 / 1.35 !important;
+      grid-template-rows: minmax(0, 1fr) auto !important;
+      align-content: stretch !important;
+      border-radius: var(--fighter-selector-card-radius);
+    }
+
+    .fighter-selector__card-photo-wrap {
+      aspect-ratio: 1 / 1.1 !important;
+      height: auto !important;
+      width: 100% !important;
+      border-radius: 0.2rem !important;
+    }
+
+    .fighter-selector__card-photo-wrap::after {
+      height: 40% !important;
+    }
+
+    .fighter-selector__card-order {
+      display: none !important;
+    }
+
+    .fighter-selector__card-name {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex-direction: column !important;
+      -webkit-line-clamp: unset !important;
+      -webkit-box-orient: unset !important;
+
+      font-size: var(--fighter-selector-name-size) !important;
+      line-height: 1.1 !important;
+      letter-spacing: -0.05em !important;
+      text-align: center !important;
+
+      word-break: normal !important;
+      word-wrap: normal !important;
+      overflow-wrap: normal !important;
+      white-space: pre-wrap !important;
+      hyphens: none !important;
+
+      text-wrap: balance !important;
+
+      width: 100% !important;
+      min-height: 2.4em !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fighter-selector__card,
+    .fighter-selector__card-photo,
+    .fighter-selector__card-ring {
+      transition: none;
+    }
+
+    .fighter-selector__card:hover,
+    .fighter-selector__card:focus-visible,
+    .fighter-selector__card.is-selected {
+      transform: none;
+    }
+  }
+</style>

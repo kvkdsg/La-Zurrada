@@ -1,0 +1,531 @@
+---
+import type { CardSide, ParticipantRecord } from '@/consts/participants'
+
+interface Props {
+  participant: ParticipantRecord
+  index: number
+  total: number
+  cardSide: CardSide
+}
+
+const { participant, index, total, cardSide } = Astro.props
+
+const mediaSide = cardSide === 'left' ? 'right' : 'left'
+const titleId = `participant-title-${participant.id}`
+const currentIndex = String(index + 1).padStart(2, '0')
+const totalCount = String(total).padStart(2, '0')
+const sceneStyle = [`--participant-accent:${participant.accent}`].join(';')
+---
+
+<section
+  class="participant-scene"
+  data-participant-scene
+  data-card-side={cardSide}
+  data-media-side={mediaSide}
+  data-manifest={participant.sequence.manifest}
+  data-poster={participant.sequence.poster}
+  data-desktop-breakpoint="960"
+  style={sceneStyle}
+  aria-labelledby={titleId}
+>
+  <div class="participant-scene__track" data-scene-track>
+    <div class="participant-scene__sticky" data-scene-sticky>
+      <div class="participant-scene__grid">
+        <div class="participant-scene__column participant-scene__column--card">
+          <article class="participant-card" data-scene-card>
+            <div class="participant-card__chrome" aria-hidden="true"></div>
+
+            <header class="participant-card__header">
+              <div class="participant-card__title-row">
+                <h2 id={titleId} class="participant-card__title">{participant.name}</h2>
+                <span
+                  class="participant-card__index"
+                  aria-label={`Participante ${currentIndex} de ${totalCount}`}
+                >
+                  {currentIndex}/{totalCount}
+                </span>
+              </div>
+              <p class="participant-card__subtitle">{participant.descriptor}</p>
+            </header>
+
+            <dl class="participant-card__meta">
+              <div class="participant-card__meta-row">
+                <dt>Rival</dt>
+                <dd>{participant.opponent}</dd>
+              </div>
+
+              <div class="participant-card__meta-row">
+                <dt>Combate</dt>
+                <dd>{participant.fightLabel}</dd>
+              </div>
+
+              <div class="participant-card__meta-row">
+                <dt>Lore</dt>
+                <dd class="participant-card__meta-value participant-card__meta-value--lore">
+                  {participant.sourceNote}
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+
+        <div class="participant-scene__column participant-scene__column--media">
+          <div class="participant-media">
+            <div class="participant-media__frame" data-scene-frame>
+              <img
+                src={participant.sequence.poster}
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+                loading="lazy"
+                class="participant-media__poster"
+                data-scene-poster
+              />
+
+              <canvas class="participant-media__canvas" data-scene-canvas aria-hidden="true"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .participant-scene {
+    --participant-accent: #c8a96c;
+    --participant-track-min-height: 250svh;
+    --participant-square-max: 42rem;
+    --scene-progress: 0;
+    --scene-enter-progress: 0;
+    --scene-exit-progress: 0;
+    position: relative;
+    width: 100%;
+    isolation: isolate;
+  }
+
+  .participant-scene__track {
+    position: relative;
+    min-height: var(--participant-track-min-height);
+  }
+
+  .participant-scene__sticky {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    min-height: 100svh;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    padding-block: 0;
+  }
+
+  .participant-scene__grid {
+    width: min(100%, 1440px);
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 2.4vw, 2rem);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: clamp(1rem, 2.4vw, 2.5rem);
+  }
+
+  .participant-scene__column {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .participant-scene__column--card {
+    order: 0;
+  }
+
+  .participant-scene__column--media {
+    order: 1;
+  }
+
+  .participant-scene[data-card-side='right'] .participant-scene__column--card {
+    order: 1;
+  }
+
+  .participant-scene[data-card-side='right'] .participant-scene__column--media {
+    order: 0;
+  }
+
+  .participant-card,
+  .participant-media {
+    width: 100%;
+    max-width: var(--participant-square-max);
+  }
+
+  .participant-card {
+    --participant-card-enter-opacity: calc(0.45 + (var(--scene-enter-progress) * 0.55));
+    --participant-card-exit-opacity-loss: calc(var(--scene-exit-progress) * 0.55);
+    position: relative;
+
+    /* FIX ESTRUCTURAL: Flex layout para que la altura abrace el contenido orgánicamente */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(1.2rem, 2.5vw, 1.8rem);
+    padding: clamp(1.5rem, 3vw, 2.2rem);
+
+    overflow: hidden;
+    border-radius: 1.6rem;
+    border: 1px solid color-mix(in srgb, var(--participant-accent) 38%, rgba(255, 255, 255, 0.18));
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04)),
+      linear-gradient(135deg, rgba(10, 16, 36, 0.88), rgba(8, 12, 26, 0.7));
+    box-shadow:
+      0 30px 90px rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    opacity: clamp(
+      0.45,
+      calc(var(--participant-card-enter-opacity) - var(--participant-card-exit-opacity-loss)),
+      1
+    );
+    transform: translateY(calc((1 - var(--scene-enter-progress)) * 1.25rem))
+      scale(calc(0.985 + (var(--scene-enter-progress) * 0.015)));
+    transition:
+      opacity 280ms ease,
+      transform 280ms ease,
+      box-shadow 280ms ease;
+    will-change: transform, opacity;
+  }
+
+  .participant-card__chrome {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in srgb, var(--participant-accent) 22%, transparent),
+        transparent 42%
+      ),
+      radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.05), transparent 38%);
+  }
+
+  .participant-card__header,
+  .participant-card__meta {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+  }
+
+  .participant-card__title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: clamp(0.75rem, 1.5vw, 1.2rem);
+  }
+
+  .participant-card__title {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.75rem, 3.2vw, 3rem);
+    line-height: 0.92;
+    text-wrap: balance;
+    text-shadow: 0 14px 40px rgba(0, 0, 0, 0.42);
+    /* Mantengo 3 líneas solo como protección extrema ante posibles traducciones largas a futuro */
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+
+  .participant-card__index {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: color-mix(in srgb, var(--participant-accent) 70%, white);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    line-height: 1;
+    white-space: nowrap;
+    margin-top: 0.15rem;
+  }
+
+  .participant-card__subtitle {
+    margin: 0.65rem 0 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-family: var(--font-fallback);
+    font-size: clamp(0.9rem, 1.15vw, 1rem);
+    line-height: 1.55;
+    text-transform: none;
+  }
+
+  .participant-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .participant-card__meta-row {
+    display: grid;
+    grid-template-columns: minmax(5rem, 5.75rem) minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: start;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .participant-card__meta-row dt {
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    line-height: 1.2;
+  }
+
+  .participant-card__meta-row dd {
+    margin: 0;
+    min-width: 0;
+    color: #fff;
+    font-family: var(--font-fallback);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    text-transform: none;
+  }
+
+  .participant-card__meta-value--lore {
+    line-height: 1.55;
+  }
+
+  .participant-media {
+    --participant-media-enter-opacity: calc(0.48 + (var(--scene-enter-progress) * 0.52));
+    --participant-media-exit-opacity-loss: calc(var(--scene-exit-progress) * 0.52);
+    --participant-edge-fade: clamp(1.15rem, 4.8vw, 2.25rem);
+    --participant-edge-mask-top: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) var(--participant-edge-fade)
+    );
+    --participant-edge-mask-bottom: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) var(--participant-edge-fade)
+    );
+    --participant-edge-mask-left: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) var(--participant-edge-fade)
+    );
+    --participant-edge-mask-right: linear-gradient(
+      to left,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) var(--participant-edge-fade)
+    );
+    position: relative;
+    aspect-ratio: 1 / 1;
+    opacity: clamp(
+      0.48,
+      calc(var(--participant-media-enter-opacity) - var(--participant-media-exit-opacity-loss)),
+      1
+    );
+    transform: translateY(calc((1 - var(--scene-enter-progress)) * 1.5rem))
+      scale(calc(0.975 + (var(--scene-enter-progress) * 0.025)));
+    transition:
+      opacity 280ms ease,
+      transform 280ms ease;
+    will-change: transform, opacity;
+  }
+
+  .participant-media__frame {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    isolation: auto;
+  }
+
+  .participant-media__poster,
+  .participant-media__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .participant-media__poster {
+    object-fit: cover;
+    object-position: center;
+    opacity: 1;
+    transition: opacity 280ms ease;
+  }
+
+  .participant-media__canvas {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 280ms ease;
+  }
+
+  @supports (
+    (mask-image: linear-gradient(black, transparent)) or
+      (-webkit-mask-image: linear-gradient(black, transparent))
+  ) {
+    .participant-media__poster,
+    .participant-media__canvas {
+      -webkit-mask-image:
+        var(--participant-edge-mask-top), var(--participant-edge-mask-bottom),
+        var(--participant-edge-mask-left), var(--participant-edge-mask-right);
+      mask-image:
+        var(--participant-edge-mask-top), var(--participant-edge-mask-bottom),
+        var(--participant-edge-mask-left), var(--participant-edge-mask-right);
+      -webkit-mask-size:
+        100% 100%,
+        100% 100%,
+        100% 100%,
+        100% 100%;
+      mask-size:
+        100% 100%,
+        100% 100%,
+        100% 100%,
+        100% 100%;
+      -webkit-mask-position:
+        0 0,
+        0 0,
+        0 0,
+        0 0;
+      mask-position:
+        0 0,
+        0 0,
+        0 0,
+        0 0;
+      -webkit-mask-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+      mask-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+      -webkit-mask-composite: source-in, source-in, source-in;
+      mask-composite: intersect, intersect, intersect;
+    }
+  }
+
+  .participant-scene[data-sequence-ready] .participant-media__canvas {
+    opacity: 1;
+  }
+
+  .participant-scene[data-sequence-ready] .participant-media__poster {
+    opacity: 0;
+  }
+
+  .participant-scene[data-sequence-fallback] .participant-media__canvas {
+    opacity: 0;
+  }
+
+  .participant-scene[data-sequence-fallback] .participant-media__poster {
+    opacity: 1;
+  }
+
+  @media (max-width: 959.98px) {
+    .participant-scene__track {
+      min-height: 185svh;
+    }
+
+    .participant-scene__sticky {
+      /* FIX STICKY MARGIN: Despegamos la tarjeta del borde del Viewport en móvil */
+      top: clamp(1rem, 2.5svh, 1.5rem);
+      min-height: auto;
+      padding-block: 0;
+    }
+
+    .participant-scene__grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .participant-scene__column--card,
+    .participant-scene__column--media,
+    .participant-scene[data-card-side='right'] .participant-scene__column--card,
+    .participant-scene[data-card-side='right'] .participant-scene__column--media {
+      order: initial;
+    }
+
+    .participant-card,
+    .participant-media {
+      max-width: min(100%, 42rem);
+    }
+
+    .participant-card {
+      gap: 0.9rem;
+      padding: 1.25rem;
+      transform: translateY(calc((1 - var(--scene-enter-progress)) * 0.8rem))
+        scale(calc(0.99 + (var(--scene-enter-progress) * 0.01)));
+    }
+
+    .participant-card__title-row {
+      gap: 0.75rem;
+    }
+
+    .participant-card__meta {
+      gap: 0.55rem;
+    }
+
+    .participant-card__meta-row {
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+      padding-top: 0.75rem;
+    }
+  }
+
+  @media (max-width: 639.98px) {
+    .participant-scene__sticky {
+      /* Ajuste proporcional del margen sticky para dispositivos móviles muy pequeños (iPhone SE/Mini) */
+      top: clamp(0.75rem, 2svh, 1rem);
+    }
+
+    .participant-card {
+      border-radius: 1.25rem;
+      padding: 1rem;
+    }
+
+    .participant-card__title {
+      font-size: clamp(1.45rem, 6.8vw, 2.1rem);
+      line-height: 0.96;
+    }
+
+    .participant-card__subtitle {
+      margin-top: 0.45rem;
+      font-size: 0.92rem;
+    }
+
+    .participant-card__meta-row dt {
+      font-size: 0.64rem;
+    }
+
+    .participant-card__meta-row dd {
+      font-size: 0.92rem;
+    }
+
+    .participant-media {
+      --participant-edge-fade: clamp(0.9rem, 5.2vw, 1.45rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .participant-card,
+    .participant-media {
+      transition: none !important;
+    }
+
+    .participant-media__poster,
+    .participant-media__canvas {
+      transition: none !important;
+    }
+  }
+</style>

@@ -1,0 +1,1885 @@
+---
+import FighterSelector from '@/components/FighterSelector.astro'
+import Countdown from '@/components/Countdown.astro'
+import {
+  defaultHeroMatchupId,
+  heroMatchups,
+  type HeroFighterRenderable,
+} from '@/consts/participants'
+
+// FECHA FICTICIA (Ej: 31 de Octubre de 2026)
+const EVENT_DATE = new Date('2026-10-31T20:00:00+02:00')
+const timestamp = EVENT_DATE.getTime()
+
+const initialMatchup =
+  heroMatchups.find((matchup) => matchup.matchupId === defaultHeroMatchupId) ?? heroMatchups.at(-1)
+
+if (!initialMatchup) {
+  throw new Error(
+    '[Hero.astro] Invalid hero matchups configuration: at least one matchup is required.',
+  )
+}
+
+const leftFighter = initialMatchup.left
+const rightFighter = initialMatchup.right
+
+const getFighterStyle = (fighter: HeroFighterRenderable) =>
+  [
+    `--hero-accent:${fighter.accent}`,
+    `--hero-reveal-angle:${fighter.revealAngle}`,
+    `--hero-reveal-core:${fighter.revealCore}`,
+    `--hero-reveal-soft:${fighter.revealSoft}`,
+    `--hero-reveal-delay:${fighter.revealDelay}`,
+  ].join(';')
+
+const heroCenterLayout = {
+  centerRaise: 'clamp(1.05rem, 2.2vh, 1.7rem)',
+  centerGap: 'clamp(0.28rem, 0.52vw, 0.42rem)',
+  logoMarginTop: '-0.35rem',
+  logoMarginBottom: '-0.5rem',
+  selectorEnterOffset: '6svh',
+  selectorRestOffset: 'clamp(0.9rem, 1.8vh, 1.3rem)',
+} as const
+
+const heroCenterStyle = [
+  `--hero-center-raise:${heroCenterLayout.centerRaise}`,
+  `--hero-center-content-gap:${heroCenterLayout.centerGap}`,
+  `--hero-logo-margin-top:${heroCenterLayout.logoMarginTop}`,
+  `--hero-logo-margin-bottom:${heroCenterLayout.logoMarginBottom}`,
+  `--hero-selector-enter-offset:${heroCenterLayout.selectorEnterOffset}`,
+  `--hero-selector-rest-offset:${heroCenterLayout.selectorRestOffset}`,
+].join(';')
+
+const heroMatchupsPayload = {
+  defaultMatchupId: defaultHeroMatchupId,
+  matchups: heroMatchups.map((matchup) => ({
+    matchupId: matchup.matchupId,
+    fightOrder: matchup.fightOrder,
+    fightLabel: matchup.fightLabel,
+    boutTier: matchup.boutTier,
+    left: matchup.left,
+    right: matchup.right,
+  })),
+}
+
+const SLOT_KEYS = ['a', 'b'] as const
+---
+
+<section
+  data-story-panel
+  class="story-panel story-panel--hero"
+  data-hero-root
+  data-active-matchup-id={initialMatchup.matchupId}
+  aria-label="Presentación de La Zurrada del Año"
+>
+  <div class="hero-scroll-scene" data-hero-scene>
+    <div class="hero-scroll-sticky">
+      <div class="story-panel__inner story-panel__inner--full">
+        <header class="hero-shell">
+          <div class="hero-stage">
+            <article
+              class="hero-fighter hero-fighter--left"
+              data-hero-exit
+              data-hero-fighter
+              data-hero-fighter-side="left"
+              data-render-mode={leftFighter.renderMode}
+              style={getFighterStyle(leftFighter)}
+              aria-label={`${leftFighter.name}, ${initialMatchup.fightLabel}`}
+            >
+              <div class="hero-fighter__stack">
+                <div class="hero-fighter__media" data-hero-fighter-media data-active-slot="a">
+                  {
+                    SLOT_KEYS.map((slotKey) => {
+                      const isActive = slotKey === 'a'
+                      return (
+                        <div
+                          class="hero-fighter__slot"
+                          data-hero-slot={slotKey}
+                          data-slot-state={isActive ? 'active' : 'idle'}
+                          aria-hidden={isActive ? 'false' : 'true'}
+                        >
+                          <img
+                            src={isActive ? leftFighter.posterImage : undefined}
+                            alt=""
+                            aria-hidden="true"
+                            decoding="async"
+                            loading="eager"
+                            class="hero-fighter__image hero-fighter__image--poster"
+                            data-hero-slot-poster
+                            hidden={isActive ? leftFighter.renderMode !== 'poster' : true}
+                          />
+
+                          <img
+                            src={isActive ? (leftFighter.baseImage ?? undefined) : undefined}
+                            srcset={
+                              isActive ? (leftFighter.baseImageSrcSet ?? undefined) : undefined
+                            }
+                            sizes="(max-width: 639.98px) 100vw, (max-width: 960px) 88vw, 40vw"
+                            alt=""
+                            aria-hidden="true"
+                            decoding="async"
+                            loading="eager"
+                            class="hero-fighter__image hero-fighter__image--base"
+                            data-hero-slot-base
+                            hidden={
+                              isActive
+                                ? leftFighter.renderMode !== 'main-event' || !leftFighter.baseImage
+                                : true
+                            }
+                          />
+
+                          <div
+                            class="hero-fighter__gear-reveal"
+                            data-hero-slot-gear-wrap
+                            aria-hidden="true"
+                            hidden={
+                              isActive
+                                ? leftFighter.renderMode !== 'main-event' || !leftFighter.gearImage
+                                : true
+                            }
+                          >
+                            <img
+                              src={isActive ? (leftFighter.gearImage ?? undefined) : undefined}
+                              srcset={
+                                isActive ? (leftFighter.gearImageSrcSet ?? undefined) : undefined
+                              }
+                              sizes="(max-width: 639.98px) 100vw, (max-width: 960px) 88vw, 40vw"
+                              alt=""
+                              aria-hidden="true"
+                              decoding="async"
+                              loading="eager"
+                              class="hero-fighter__image hero-fighter__image--gear"
+                              data-hero-slot-gear
+                              hidden={
+                                isActive
+                                  ? leftFighter.renderMode !== 'main-event' ||
+                                    !leftFighter.gearImage
+                                  : true
+                              }
+                            />
+                          </div>
+                        </div>
+                      )
+                    })
+                  }
+                </div>
+
+                <div class="hero-fighter__caption">
+                  <span class="hero-fighter__role" data-hero-fighter-role>
+                    {initialMatchup.boutTier}
+                  </span>
+                  <span class="hero-fighter__name" data-hero-fighter-name>{leftFighter.name}</span>
+                </div>
+              </div>
+            </article>
+
+            <div class="hero-stage__center-shell" data-hero-exit>
+              <div class="hero-stage__center" style={heroCenterStyle}>
+                <div class="hero-stage__center-glow" aria-hidden="true"></div>
+
+                <div class="hero-stage__center-stack">
+                  <div
+                    class="hero-stage__center-content"
+                    data-hero-center-primary
+                    style="gap: var(--hero-center-content-gap);"
+                  >
+                    <div
+                      class="hero-logo animate-fade-in animate-delay-500"
+                      role="img"
+                      aria-label="Logo de La Zurrada del Año"
+                      style="margin-top: var(--hero-logo-margin-top); margin-bottom: var(--hero-logo-margin-bottom);"
+                    >
+                      <picture>
+                        <source srcset="/logo.avif" type="image/avif" />
+                        <source srcset="/logo.webp" type="image/webp" />
+                        <img
+                          src="/logo.webp"
+                          alt="La Zurrada del Año"
+                          class="hero-logo__image"
+                          width="384"
+                          height="384"
+                          fetchpriority="high"
+                          decoding="async"
+                        />
+                      </picture>
+                    </div>
+
+                    <h1 class="sr-only">
+                      La Zurrada del Año — Evento de boxeo de creadores de contenido el 31 de
+                      octubre de 2026
+                    </h1>
+
+                    <div data-event-info class="hero-event-meta animate-fade-in animate-delay-700">
+                      <time datetime="2026-10-31">31 DE OCTUBRE</time>
+                      <span class="hero-event-meta__divider" aria-hidden="true">|</span>
+                      <time datetime="2026-10-31T20:00:00+02:00">20:00H CET</time>
+                      <span class="hero-event-meta__divider" aria-hidden="true">|</span>
+                      <span>ARENA CÓDIGO, MADRID</span>
+                    </div>
+
+                    <Countdown timestamp={timestamp} id="hero-countdown" />
+                  </div>
+
+                  <div class="hero-stage__selector-shell" data-hero-center-selector>
+                    <div class="hero-stage__selector">
+                      <FighterSelector
+                        id="hero-fighter-selector"
+                        title="Selector de luchadores"
+                        eyebrow="Selecciona un combate"
+                        eventName="hero:matchup-change"
+                        defaultMatchupId={defaultHeroMatchupId}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <article
+              class="hero-fighter hero-fighter--right"
+              data-hero-exit
+              data-hero-fighter
+              data-hero-fighter-side="right"
+              data-render-mode={rightFighter.renderMode}
+              style={getFighterStyle(rightFighter)}
+              aria-label={`${rightFighter.name}, ${initialMatchup.fightLabel}`}
+            >
+              <div class="hero-fighter__stack">
+                <div class="hero-fighter__media" data-hero-fighter-media data-active-slot="a">
+                  {
+                    SLOT_KEYS.map((slotKey) => {
+                      const isActive = slotKey === 'a'
+                      return (
+                        <div
+                          class="hero-fighter__slot"
+                          data-hero-slot={slotKey}
+                          data-slot-state={isActive ? 'active' : 'idle'}
+                          aria-hidden={isActive ? 'false' : 'true'}
+                        >
+                          <img
+                            src={isActive ? rightFighter.posterImage : undefined}
+                            alt=""
+                            aria-hidden="true"
+                            decoding="async"
+                            loading="eager"
+                            class="hero-fighter__image hero-fighter__image--poster"
+                            data-hero-slot-poster
+                            hidden={isActive ? rightFighter.renderMode !== 'poster' : true}
+                          />
+
+                          <img
+                            src={isActive ? (rightFighter.baseImage ?? undefined) : undefined}
+                            srcset={
+                              isActive ? (rightFighter.baseImageSrcSet ?? undefined) : undefined
+                            }
+                            sizes="(max-width: 639.98px) 100vw, (max-width: 960px) 88vw, 40vw"
+                            alt=""
+                            aria-hidden="true"
+                            decoding="async"
+                            loading="eager"
+                            class="hero-fighter__image hero-fighter__image--base"
+                            data-hero-slot-base
+                            hidden={
+                              isActive
+                                ? rightFighter.renderMode !== 'main-event' ||
+                                  !rightFighter.baseImage
+                                : true
+                            }
+                          />
+
+                          <div
+                            class="hero-fighter__gear-reveal"
+                            data-hero-slot-gear-wrap
+                            aria-hidden="true"
+                            hidden={
+                              isActive
+                                ? rightFighter.renderMode !== 'main-event' ||
+                                  !rightFighter.gearImage
+                                : true
+                            }
+                          >
+                            <img
+                              src={isActive ? (rightFighter.gearImage ?? undefined) : undefined}
+                              srcset={
+                                isActive ? (rightFighter.gearImageSrcSet ?? undefined) : undefined
+                              }
+                              sizes="(max-width: 639.98px) 100vw, (max-width: 960px) 88vw, 40vw"
+                              alt=""
+                              aria-hidden="true"
+                              decoding="async"
+                              loading="eager"
+                              class="hero-fighter__image hero-fighter__image--gear"
+                              data-hero-slot-gear
+                              hidden={
+                                isActive
+                                  ? rightFighter.renderMode !== 'main-event' ||
+                                    !rightFighter.gearImage
+                                  : true
+                              }
+                            />
+                          </div>
+                        </div>
+                      )
+                    })
+                  }
+                </div>
+
+                <div class="hero-fighter__caption">
+                  <span class="hero-fighter__role" data-hero-fighter-role>
+                    {initialMatchup.boutTier}
+                  </span>
+                  <span class="hero-fighter__name" data-hero-fighter-name>{rightFighter.name}</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </header>
+      </div>
+    </div>
+  </div>
+
+  <script
+    is:inline
+    type="application/json"
+    data-hero-matchups-payload
+    set:html={JSON.stringify(heroMatchupsPayload)}
+  />
+
+  <script>
+    type HeroRenderablePayload = {
+      participantId: string
+      slug: string
+      name: string
+      accent: string
+      posterImage: string
+      baseImage: string | null
+      baseImageSrcSet: string | null
+      gearImage: string | null
+      gearImageSrcSet: string | null
+      renderMode: 'main-event' | 'poster'
+      revealAngle: string
+      revealCore: string
+      revealSoft: string
+      revealDelay: string
+    }
+
+    type HeroMatchupPayload = {
+      matchupId: string
+      fightOrder: number
+      fightLabel: string
+      boutTier: string
+      left: HeroRenderablePayload
+      right: HeroRenderablePayload
+    }
+
+    type HeroPayload = {
+      defaultMatchupId: string
+      matchups: HeroMatchupPayload[]
+    }
+
+    type VisualSlot = {
+      root: HTMLElement
+      poster: HTMLImageElement | null
+      base: HTMLImageElement | null
+      gearWrap: HTMLElement | null
+      gear: HTMLImageElement | null
+    }
+
+    type FighterVisualNodes = {
+      root: HTMLElement
+      role: HTMLElement | null
+      name: HTMLElement | null
+      media: HTMLElement
+      slots: Record<'a' | 'b', VisualSlot>
+      activeSlot: 'a' | 'b'
+    }
+
+    type HeroWindowState = Window & {
+      __heroPageLoadHandler__?: () => void
+      __heroBeforeSwapHandler__?: () => void
+      __heroPreloadedAssetUrls__?: Set<string>
+      __heroPendingAssetLoads__?: Map<string, Promise<void>>
+      requestIdleCallback?: (
+        callback: (deadline: IdleDeadline) => void,
+        options?: IdleRequestOptions,
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+
+    const HERO_SCROLL_READY_ATTR = 'data-hero-scroll-ready'
+    const HERO_EVENT_NAME = 'hero:matchup-change'
+    const HERO_ASSET_WARMUP_CONCURRENCY = 3
+    const HERO_RESPONSIVE_SIZES = '(max-width: 639.98px) 100vw, (max-width: 960px) 88vw, 40vw'
+
+    const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value))
+
+    const mapRange = (value: number, start: number, end: number) => {
+      if (end <= start) return value >= end ? 1 : 0
+      return clamp((value - start) / (end - start))
+    }
+
+    let destroyHeroScrollScene: (() => void) | null = null
+    let destroyHeroMatchupSync: (() => void) | null = null
+
+    const getHeroRoot = () => document.querySelector<HTMLElement>('[data-hero-root]')
+
+    const heroWindow = window as HeroWindowState
+    const preloadedAssetUrls = heroWindow.__heroPreloadedAssetUrls__ ?? new Set<string>()
+    const pendingAssetLoads =
+      heroWindow.__heroPendingAssetLoads__ ?? new Map<string, Promise<void>>()
+
+    heroWindow.__heroPreloadedAssetUrls__ = preloadedAssetUrls
+    heroWindow.__heroPendingAssetLoads__ = pendingAssetLoads
+
+    const scheduleIdle = (callback: () => void): number => {
+      if (typeof heroWindow.requestIdleCallback === 'function') {
+        return heroWindow.requestIdleCallback(() => callback(), { timeout: 1200 })
+      }
+      return window.setTimeout(callback, 180)
+    }
+
+    const cancelScheduledIdle = (handle: number | null) => {
+      if (handle === null) return
+      if (typeof heroWindow.cancelIdleCallback === 'function') {
+        heroWindow.cancelIdleCallback(handle)
+        return
+      }
+      window.clearTimeout(handle)
+    }
+
+    const uniqueUrls = (urls: readonly string[]) => {
+      const seen = new Set<string>()
+      return urls.filter((url) => {
+        if (!url || seen.has(url)) return false
+        seen.add(url)
+        return true
+      })
+    }
+
+    const extractSrcSetUrls = (srcSet: string | null | undefined): string[] => {
+      if (!srcSet) return []
+      return srcSet
+        .split(',')
+        .map((entry) => entry.trim().split(/\s+/)[0] ?? '')
+        .filter(Boolean)
+    }
+
+    const collectFighterAssetUrls = (fighter: HeroRenderablePayload): string[] =>
+      uniqueUrls(
+        [
+          fighter.posterImage,
+          fighter.baseImage,
+          fighter.gearImage,
+          ...extractSrcSetUrls(fighter.baseImageSrcSet),
+          ...extractSrcSetUrls(fighter.gearImageSrcSet),
+        ].filter((value): value is string => Boolean(value)),
+      )
+
+    const collectMatchupAssetUrls = (matchup: HeroMatchupPayload): string[] =>
+      uniqueUrls([
+        ...collectFighterAssetUrls(matchup.left),
+        ...collectFighterAssetUrls(matchup.right),
+      ])
+
+    const preloadHeroAsset = async (url: string): Promise<void> => {
+      if (!url) return
+      if (preloadedAssetUrls.has(url)) return
+
+      const pendingLoad = pendingAssetLoads.get(url)
+      if (pendingLoad) {
+        await pendingLoad
+        return
+      }
+
+      const loadPromise = new Promise<void>((resolve) => {
+        const image = new Image()
+        image.decoding = 'async'
+
+        const cleanup = () => {
+          image.removeEventListener('load', handleLoad)
+          image.removeEventListener('error', handleError)
+          pendingAssetLoads.delete(url)
+        }
+
+        const finalize = (markReady: boolean) => {
+          cleanup()
+          if (markReady) preloadedAssetUrls.add(url)
+          resolve()
+        }
+
+        const handleLoad = async () => {
+          try {
+            if (typeof image.decode === 'function') await image.decode()
+          } catch {}
+          finalize(true)
+        }
+
+        const handleError = () => finalize(false)
+
+        image.addEventListener('load', handleLoad, { once: true })
+        image.addEventListener('error', handleError, { once: true })
+        image.src = url
+
+        if (image.complete) {
+          if (image.naturalWidth > 0) void handleLoad()
+          else handleError()
+        }
+      })
+
+      pendingAssetLoads.set(url, loadPromise)
+      await loadPromise
+    }
+
+    const runPreloadQueue = async (
+      urls: readonly string[],
+      concurrency = HERO_ASSET_WARMUP_CONCURRENCY,
+    ): Promise<void> => {
+      const queue = uniqueUrls(urls).filter((url) => !preloadedAssetUrls.has(url))
+      if (queue.length === 0) return
+
+      let nextIndex = 0
+      const worker = async () => {
+        while (nextIndex < queue.length) {
+          const currentIndex = nextIndex++
+          const url = queue[currentIndex]
+          if (url) await preloadHeroAsset(url)
+        }
+      }
+
+      const workerCount = Math.min(concurrency, queue.length)
+      await Promise.all(Array.from({ length: workerCount }, () => worker()))
+    }
+
+    const setNodeText = (node: HTMLElement | null, value: string) => {
+      if (!node || node.textContent === value) return
+      node.textContent = value
+    }
+
+    const setStyleVariable = (element: HTMLElement, property: string, value: string) => {
+      if (element.style.getPropertyValue(property) === value) return
+      element.style.setProperty(property, value)
+    }
+
+    function initHeroScrollScene() {
+      destroyHeroScrollScene?.()
+      destroyHeroScrollScene = null
+
+      const heroRoot = getHeroRoot()
+      const scene = heroRoot?.querySelector<HTMLElement>('[data-hero-scene]')
+      if (!scene) return
+
+      let rafId = 0
+      let isDestroyed = false
+      let metricsDirty = true
+      let viewportHeight = 0
+      let track = 1
+      let sceneOffsetTop = 0
+      let lastCenterProgress = ''
+      let lastExitProgress = ''
+      let resizeObserver: ResizeObserver | null = null
+
+      const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+      const recalculateMetrics = () => {
+        viewportHeight = window.innerHeight || document.documentElement.clientHeight
+
+        let offset = 0
+        let el = scene as HTMLElement | null
+        while (el) {
+          offset += el.offsetTop
+          el = el.offsetParent as HTMLElement | null
+        }
+        sceneOffsetTop = offset
+
+        track = Math.max(scene.offsetHeight - viewportHeight, 1)
+        metricsDirty = false
+      }
+
+      // Optimización: DOM Write Batching
+      // Modificamos un único nodo (el contenedor padre .hero-scroll-scene) en O(1)
+      const writeProgress = (centerProgress: string, exitProgress: string) => {
+        if (centerProgress !== lastCenterProgress) {
+          scene.style.setProperty('--hero-center-progress', centerProgress)
+          lastCenterProgress = centerProgress
+        }
+
+        if (exitProgress !== lastExitProgress) {
+          scene.style.setProperty('--hero-exit-progress', exitProgress)
+          lastExitProgress = exitProgress
+        }
+      }
+
+      const update = () => {
+        if (isDestroyed) return
+        rafId = 0
+
+        if (metricsDirty) {
+          recalculateMetrics()
+        }
+
+        if (reducedMotionQuery.matches) {
+          writeProgress('0', '0')
+          return
+        }
+
+        const scrollY = window.scrollY
+        const progress = clamp((scrollY - sceneOffsetTop) / track)
+
+        const centerProgress = mapRange(progress, 0.06, 0.42).toFixed(3)
+        const exitProgress = mapRange(progress, 0.58, 0.92).toFixed(3)
+
+        writeProgress(centerProgress, exitProgress)
+      }
+
+      const requestTick = () => {
+        if (isDestroyed || rafId || document.visibilityState === 'hidden') return
+        rafId = window.requestAnimationFrame(update)
+      }
+
+      const invalidateMetrics = () => {
+        metricsDirty = true
+        requestTick()
+      }
+
+      const handleReducedMotionChange = () => {
+        metricsDirty = true
+
+        if (reducedMotionQuery.matches) {
+          scene.setAttribute(HERO_SCROLL_READY_ATTR, '')
+        } else {
+          scene.removeAttribute(HERO_SCROLL_READY_ATTR)
+        }
+
+        requestTick()
+      }
+
+      const handleVisibilityChange = () => {
+        if (document.visibilityState !== 'visible') return
+        metricsDirty = true
+        requestTick()
+      }
+
+      reducedMotionQuery.addEventListener('change', handleReducedMotionChange)
+      window.addEventListener('scroll', requestTick, { passive: true })
+      window.addEventListener('resize', invalidateMetrics, { passive: true })
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(() => {
+          invalidateMetrics()
+        })
+        resizeObserver.observe(scene)
+      }
+
+      scene.setAttribute(HERO_SCROLL_READY_ATTR, '')
+      recalculateMetrics()
+      update()
+
+      destroyHeroScrollScene = () => {
+        isDestroyed = true
+
+        if (rafId) window.cancelAnimationFrame(rafId)
+
+        resizeObserver?.disconnect()
+        window.removeEventListener('scroll', requestTick)
+        window.removeEventListener('resize', invalidateMetrics)
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        reducedMotionQuery.removeEventListener('change', handleReducedMotionChange)
+
+        scene.removeAttribute(HERO_SCROLL_READY_ATTR)
+        scene.style.removeProperty('--hero-center-progress')
+        scene.style.removeProperty('--hero-exit-progress')
+      }
+    }
+
+    function initHeroMatchupSync() {
+      destroyHeroMatchupSync?.()
+      destroyHeroMatchupSync = null
+
+      const heroRoot = getHeroRoot()
+      if (!heroRoot) return
+
+      const payloadNode = heroRoot.querySelector<HTMLScriptElement>('[data-hero-matchups-payload]')
+      const leftRoot = heroRoot.querySelector<HTMLElement>('[data-hero-fighter-side="left"]')
+      const rightRoot = heroRoot.querySelector<HTMLElement>('[data-hero-fighter-side="right"]')
+
+      const payloadText = payloadNode?.textContent?.trim()
+      if (!payloadText || !leftRoot || !rightRoot) return
+
+      const payload = JSON.parse(payloadText) as HeroPayload
+      const matchups = new Map(
+        payload.matchups.map((matchup) => [matchup.matchupId, matchup] as const),
+      )
+
+      const getVisualSlot = (root: HTMLElement, slotKey: 'a' | 'b'): VisualSlot => {
+        const slotRoot = root.querySelector<HTMLElement>(`[data-hero-slot="${slotKey}"]`)!
+        return {
+          root: slotRoot,
+          poster: slotRoot.querySelector<HTMLImageElement>('[data-hero-slot-poster]'),
+          base: slotRoot.querySelector<HTMLImageElement>('[data-hero-slot-base]'),
+          gearWrap: slotRoot.querySelector<HTMLElement>('[data-hero-slot-gear-wrap]'),
+          gear: slotRoot.querySelector<HTMLImageElement>('[data-hero-slot-gear]'),
+        }
+      }
+
+      const getFighterVisualNodes = (root: HTMLElement): FighterVisualNodes => {
+        const media = root.querySelector<HTMLElement>('[data-hero-fighter-media]')!
+        return {
+          root,
+          role: root.querySelector<HTMLElement>('[data-hero-fighter-role]'),
+          name: root.querySelector<HTMLElement>('[data-hero-fighter-name]'),
+          media,
+          slots: {
+            a: getVisualSlot(media, 'a'),
+            b: getVisualSlot(media, 'b'),
+          },
+          activeSlot: (media.dataset['activeSlot'] as 'a' | 'b') || 'a',
+        }
+      }
+
+      const leftNodes = getFighterVisualNodes(leftRoot)
+      const rightNodes = getFighterVisualNodes(rightRoot)
+
+      let currentMatchupId = payload.defaultMatchupId
+      let swapToken = 0
+      let currentSwapPromise: Promise<void> = Promise.resolve()
+      let warmupStarted = false
+      let warmupIdleHandle: number | null = null
+
+      const setStyleVariables = (root: HTMLElement, fighter: HeroRenderablePayload) => {
+        setStyleVariable(root, '--hero-accent', fighter.accent)
+        setStyleVariable(root, '--hero-reveal-angle', fighter.revealAngle)
+        setStyleVariable(root, '--hero-reveal-core', fighter.revealCore)
+        setStyleVariable(root, '--hero-reveal-soft', fighter.revealSoft)
+        setStyleVariable(root, '--hero-reveal-delay', fighter.revealDelay)
+      }
+
+      const getInactiveSlotKey = (key: 'a' | 'b') => (key === 'a' ? 'b' : 'a')
+
+      const waitForImageReady = async (
+        image: HTMLImageElement | null,
+        opts: {
+          src: string | null
+          srcSet?: string | null
+          sizes?: string | null
+          shouldShow: boolean
+        },
+      ) => {
+        if (!image) return
+
+        const { src, srcSet = null, sizes = null, shouldShow } = opts
+
+        if (!src || !shouldShow) {
+          image.removeAttribute('src')
+          image.removeAttribute('srcset')
+          image.removeAttribute('sizes')
+          image.hidden = true
+          return
+        }
+
+        const candidateUrls = uniqueUrls(
+          [src, ...extractSrcSetUrls(srcSet)].filter((value): value is string => Boolean(value)),
+        )
+
+        await runPreloadQueue(candidateUrls, 2)
+
+        image.loading = 'eager'
+        image.decoding = 'async'
+        image.hidden = false
+
+        if (srcSet) image.setAttribute('srcset', srcSet)
+        else image.removeAttribute('srcset')
+
+        if (sizes) image.setAttribute('sizes', sizes)
+        else image.removeAttribute('sizes')
+
+        if (image.getAttribute('src') !== src) {
+          image.setAttribute('src', src)
+        }
+
+        if (image.complete && image.naturalWidth > 0) {
+          try {
+            await image.decode?.()
+          } catch {}
+          return
+        }
+
+        await new Promise<void>((resolve) => {
+          let settled = false
+
+          const cleanup = () => {
+            image.removeEventListener('load', onLoad)
+            image.removeEventListener('error', onError)
+            window.clearTimeout(timeoutId)
+          }
+
+          const finalize = () => {
+            if (settled) return
+            settled = true
+            cleanup()
+            resolve()
+          }
+
+          const onLoad = () => finalize()
+          const onError = () => {
+            image.hidden = true
+            finalize()
+          }
+
+          const timeoutId = window.setTimeout(() => {
+            image.hidden = image.naturalWidth === 0
+            finalize()
+          }, 3500)
+
+          image.addEventListener('load', onLoad, { once: true })
+          image.addEventListener('error', onError, { once: true })
+        })
+
+        try {
+          await image.decode?.()
+        } catch {}
+      }
+
+      const prepareSlot = async (
+        slot: VisualSlot,
+        fighter: HeroRenderablePayload,
+        sizes: string,
+      ) => {
+        const isMainEvent = fighter.renderMode === 'main-event'
+
+        slot.root.dataset['slotState'] = 'preparing'
+        slot.root.setAttribute('aria-hidden', 'true')
+
+        await Promise.all([
+          waitForImageReady(slot.poster, {
+            src: fighter.posterImage,
+            shouldShow: !isMainEvent,
+          }),
+          waitForImageReady(slot.base, {
+            src: fighter.baseImage,
+            srcSet: fighter.baseImageSrcSet,
+            sizes,
+            shouldShow: isMainEvent,
+          }),
+          waitForImageReady(slot.gear, {
+            src: fighter.gearImage,
+            srcSet: fighter.gearImageSrcSet,
+            sizes,
+            shouldShow: isMainEvent && Boolean(fighter.gearImage),
+          }),
+        ])
+
+        if (slot.gearWrap) {
+          slot.gearWrap.hidden = !isMainEvent || !fighter.gearImage
+        }
+      }
+
+      const commitFighterSwap = (
+        nodes: FighterVisualNodes,
+        fighter: HeroRenderablePayload,
+        matchup: HeroMatchupPayload,
+      ) => {
+        const nextKey = getInactiveSlotKey(nodes.activeSlot)
+        const prevKey = nodes.activeSlot
+        const nextSlot = nodes.slots[nextKey]
+        const prevSlot = nodes.slots[prevKey]
+
+        nodes.root.dataset['renderMode'] = fighter.renderMode
+        nodes.root.setAttribute('aria-label', `${fighter.name}, ${matchup.fightLabel}`)
+
+        setNodeText(nodes.name, fighter.name)
+        setNodeText(nodes.role, matchup.boutTier)
+        setStyleVariables(nodes.root, fighter)
+
+        prevSlot.root.dataset['slotState'] = 'leaving'
+        prevSlot.root.setAttribute('aria-hidden', 'true')
+
+        nextSlot.root.dataset['slotState'] = 'active'
+        nextSlot.root.setAttribute('aria-hidden', 'false')
+
+        nodes.media.dataset['activeSlot'] = nextKey
+        nodes.activeSlot = nextKey
+
+        window.setTimeout(() => {
+          if (prevSlot.root.dataset['slotState'] === 'leaving') {
+            prevSlot.root.dataset['slotState'] = 'idle'
+          }
+        }, 360)
+      }
+
+      const swapMatchup = async (matchupId: string) => {
+        const matchup = matchups.get(matchupId)
+        if (!matchup || currentMatchupId === matchupId) return
+
+        const token = ++swapToken
+        const selectorRoot = document.querySelector<HTMLElement>('[data-fighter-selector]')
+
+        if (selectorRoot) {
+          selectorRoot.setAttribute('data-busy', 'true')
+          selectorRoot.setAttribute('aria-busy', 'true')
+        }
+
+        try {
+          const leftNext = leftNodes.slots[getInactiveSlotKey(leftNodes.activeSlot)]
+          const rightNext = rightNodes.slots[getInactiveSlotKey(rightNodes.activeSlot)]
+
+          await Promise.all([
+            prepareSlot(leftNext, matchup.left, HERO_RESPONSIVE_SIZES),
+            prepareSlot(rightNext, matchup.right, HERO_RESPONSIVE_SIZES),
+          ])
+
+          if (token !== swapToken) return
+
+          await new Promise<void>((resolve) => {
+            requestAnimationFrame(() => {
+              if (token !== swapToken) return resolve()
+
+              if (heroRoot.dataset['activeMatchupId'] !== matchup.matchupId) {
+                heroRoot.dataset['activeMatchupId'] = matchup.matchupId
+              }
+
+              if (!heroRoot.classList.contains('has-swapped')) {
+                heroRoot.classList.add('has-swapped')
+              }
+
+              commitFighterSwap(leftNodes, matchup.left, matchup)
+              commitFighterSwap(rightNodes, matchup.right, matchup)
+
+              currentMatchupId = matchup.matchupId
+              resolve()
+            })
+          })
+        } finally {
+          if (selectorRoot) {
+            selectorRoot.removeAttribute('data-busy')
+            selectorRoot.removeAttribute('aria-busy')
+          }
+        }
+      }
+
+      const removeWarmupListeners = () => {
+        window.removeEventListener('scroll', startWarmup)
+        window.removeEventListener('pointerdown', startWarmup)
+        window.removeEventListener('touchstart', startWarmup)
+        window.removeEventListener('keydown', startWarmup)
+      }
+
+      const startWarmup = () => {
+        if (warmupStarted) return
+        warmupStarted = true
+        removeWarmupListeners()
+        cancelScheduledIdle(warmupIdleHandle)
+        warmupIdleHandle = null
+
+        const warmupUrls = uniqueUrls(
+          payload.matchups.flatMap((matchup) => collectMatchupAssetUrls(matchup)),
+        )
+        void runPreloadQueue(warmupUrls)
+      }
+
+      const handleMatchupChange = (event: Event) => {
+        const customEvent = event as CustomEvent<{ matchupId?: string }>
+        const matchupId = customEvent.detail?.matchupId
+        if (!matchupId || !matchups.has(matchupId)) return
+
+        currentSwapPromise = currentSwapPromise
+          .catch(() => undefined)
+          .then(() => swapMatchup(matchupId))
+          .catch(() => undefined)
+      }
+
+      window.addEventListener(HERO_EVENT_NAME, handleMatchupChange as EventListener)
+      window.addEventListener('scroll', startWarmup, { passive: true })
+      window.addEventListener('pointerdown', startWarmup, { passive: true })
+      window.addEventListener('touchstart', startWarmup, { passive: true })
+      window.addEventListener('keydown', startWarmup)
+
+      warmupIdleHandle = scheduleIdle(startWarmup)
+
+      destroyHeroMatchupSync = () => {
+        window.removeEventListener(HERO_EVENT_NAME, handleMatchupChange as EventListener)
+        removeWarmupListeners()
+        cancelScheduledIdle(warmupIdleHandle)
+        warmupIdleHandle = null
+        swapToken++
+      }
+    }
+
+    if (heroWindow.__heroPageLoadHandler__) {
+      document.removeEventListener('astro:page-load', heroWindow.__heroPageLoadHandler__)
+    }
+
+    if (heroWindow.__heroBeforeSwapHandler__) {
+      document.removeEventListener('astro:before-swap', heroWindow.__heroBeforeSwapHandler__)
+    }
+
+    const handleHeroPageLoad = () => {
+      initHeroScrollScene()
+      initHeroMatchupSync()
+    }
+
+    const handleHeroBeforeSwap = () => {
+      destroyHeroScrollScene?.()
+      destroyHeroScrollScene = null
+
+      destroyHeroMatchupSync?.()
+      destroyHeroMatchupSync = null
+    }
+
+    heroWindow.__heroPageLoadHandler__ = handleHeroPageLoad
+    heroWindow.__heroBeforeSwapHandler__ = handleHeroBeforeSwap
+
+    document.addEventListener('astro:page-load', handleHeroPageLoad)
+    document.addEventListener('astro:before-swap', handleHeroBeforeSwap)
+
+    handleHeroPageLoad()
+  </script>
+</section>
+
+<style is:global>
+  .story-panel--hero {
+    --hero-center-progress: 0;
+    --hero-exit-progress: 0;
+    --hero-shell-padding-top: clamp(1rem, 1.8vw, 1.45rem);
+    --hero-shell-padding-bottom: clamp(0.35rem, 0.8vw, 0.6rem);
+    --hero-shell-footer-gap: clamp(0.45rem, 1vh, 0.85rem);
+    padding-block: 0;
+    opacity: 1;
+    transform: none;
+  }
+
+  /* GPU Hardware Acceleration explicit layers */
+  .hero-stage__center-shell,
+  .hero-stage__center-content,
+  .hero-stage__selector-shell,
+  .hero-fighter[data-hero-exit] {
+    will-change: transform, opacity;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+  }
+
+  .hero-scroll-scene {
+    position: relative;
+    min-height: 300svh;
+    width: 100%;
+  }
+
+  .hero-scroll-sticky {
+    position: sticky;
+    top: 0;
+    min-height: 100svh;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    overflow: clip;
+  }
+
+  .story-panel--hero .story-panel__inner.story-panel__inner--full {
+    align-items: stretch;
+  }
+
+  .story-panel--hero .hero-shell {
+    min-height: 100svh;
+    width: 100%;
+    display: grid;
+    grid-template-rows: 1fr;
+    justify-content: normal;
+    gap: 0;
+    padding: var(--hero-shell-padding-top) clamp(1rem, 2vw, 1.5rem) var(--hero-shell-padding-bottom);
+  }
+
+  .hero-stage {
+    min-height: 0;
+    height: 100%;
+    align-items: center;
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(320px, 560px) minmax(240px, 1fr);
+    grid-template-areas: 'left center right';
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+  }
+
+  .hero-stage__center-shell {
+    grid-area: center;
+    position: relative;
+    width: min(100%, 60rem);
+    max-width: 60rem;
+    min-width: 0;
+    justify-self: center;
+    align-self: center;
+    z-index: 2;
+    opacity: calc(1 - var(--hero-exit-progress, 0));
+    transform: translateY(calc(var(--hero-exit-progress, 0) * -10svh)) translateZ(0);
+  }
+
+  .hero-stage__center {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    justify-self: auto;
+    align-self: auto;
+    transform: translateY(calc(var(--hero-center-raise) * -1));
+    isolation: isolate;
+  }
+
+  .hero-stage__center-glow {
+    position: absolute;
+    inset: -1.4rem -1.2rem;
+    z-index: 0;
+    border-radius: 1.75rem;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at center, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 62%),
+      linear-gradient(180deg, rgba(10, 16, 36, 0.3), rgba(10, 16, 36, 0.05));
+    filter: blur(18px);
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .hero-stage__center-stack {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    isolation: isolate;
+  }
+
+  .hero-stage__center-content,
+  .hero-stage__selector-shell {
+    grid-area: 1 / 1;
+    width: 100%;
+  }
+
+  .hero-stage__center-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--hero-center-content-gap);
+    text-align: center;
+    opacity: calc(1 - var(--hero-center-progress, 0));
+    transform: translateY(calc(var(--hero-center-progress, 0) * -14svh)) translateZ(0);
+    pointer-events: none;
+  }
+
+  .hero-logo {
+    display: inline-flex;
+    justify-content: center;
+    margin-block: var(--hero-logo-air-offset-y, calc(var(--hero-center-content-gap) * -0.25));
+    filter: drop-shadow(0 14px 40px rgba(0, 0, 0, 0.4))
+      drop-shadow(0 0 18px rgba(200, 169, 108, 0.16));
+  }
+
+  .hero-logo__image {
+    display: block;
+    width: 17.5rem;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .hero-event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem 0.8rem;
+    max-width: 36rem;
+    color: white;
+    text-wrap: balance;
+  }
+
+  .hero-event-meta time,
+  .hero-event-meta span {
+    font-size: clamp(0.54rem, 0.9vw, 0.8rem);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+  }
+
+  .hero-event-meta__divider {
+    color: rgba(255, 255, 255, 0.28);
+  }
+
+  .hero-stage__selector-shell {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: var(--hero-center-progress, 0);
+    transform: translateY(
+        calc(
+          ((1 - var(--hero-center-progress, 0)) * var(--hero-selector-enter-offset, 6svh)) +
+            var(--hero-center-raise) + var(--hero-selector-rest-offset, 1rem)
+        )
+      )
+      translateZ(0);
+    pointer-events: auto;
+  }
+
+  .hero-stage__selector {
+    width: min(100%, 56rem);
+    min-width: 0;
+  }
+
+  .hero-stage__selector .fighter-selector {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .hero-fighter {
+    --hero-bottom-fade-mask: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 1) 0%,
+      rgba(0, 0, 0, 1) 82%,
+      rgba(0, 0, 0, 0.82) 88%,
+      rgba(0, 0, 0, 0.45) 93%,
+      rgba(0, 0, 0, 0) 100%
+    );
+    --hero-reveal-angle: 112deg;
+    --hero-reveal-core: 16%;
+    --hero-reveal-soft: 8%;
+    --hero-reveal-delay: 1400ms;
+    --hero-reveal-start-x: -180%;
+    --hero-reveal-mid-x: 50%;
+    --hero-reveal-end-x: 180%;
+    --hero-gear-cycle: 6800ms;
+    --hero-gear-mask-size: 240% 240%;
+    --hero-float-cycle: 6200ms;
+    --hero-float-y: 0.45rem;
+    --hero-float-scale: 1.006;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    min-height: clamp(28rem, 66vh, 46rem);
+    pointer-events: none;
+  }
+
+  .hero-fighter--left {
+    grid-area: left;
+    justify-content: flex-end;
+  }
+
+  .hero-fighter--right {
+    grid-area: right;
+    justify-content: flex-start;
+    --hero-reveal-angle: 68deg;
+    --hero-reveal-start-x: 180%;
+    --hero-reveal-end-x: -180%;
+  }
+
+  .hero-fighter__stack {
+    width: min(100%, 31rem);
+  }
+
+  .hero-fighter__media {
+    --hero-media-rest-y: -0.75rem;
+    --hero-overlay-shift-y: 0.8rem;
+    --hero-overlay-scale: 1.02;
+    position: relative;
+    height: clamp(25rem, 60vh, 43rem);
+    width: 100%;
+    overflow: visible;
+    isolation: isolate;
+    transform: translateY(var(--hero-media-rest-y));
+    animation: hero-float var(--hero-float-cycle) ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .hero-fighter__slot {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(1rem) scale(0.985) translateZ(0);
+    filter: blur(8px);
+    transition:
+      opacity 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0ms linear 420ms;
+    will-change: opacity, transform, filter;
+  }
+
+  .hero-fighter__slot[data-slot-state='preparing'] {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .hero-fighter__slot[data-slot-state='active'] {
+    opacity: 1;
+    visibility: visible;
+    filter: blur(0);
+    transform: translateY(0) scale(1) translateZ(0);
+    transition-delay: 0ms, 0ms, 0ms, 0ms;
+  }
+
+  .hero-fighter__slot[data-slot-state='leaving'] {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-0.35rem) scale(1.01) translateZ(0);
+    filter: blur(6px);
+    transition:
+      opacity 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0ms linear 320ms;
+  }
+
+  .hero-fighter__slot:not([data-slot-state='active']) .hero-fighter__image--base,
+  .hero-fighter__slot:not([data-slot-state='active']) .hero-fighter__image--gear {
+    animation: none !important;
+  }
+
+  [data-hero-root].has-swapped .hero-fighter__image--base {
+    animation-duration: 480ms;
+  }
+
+  .hero-fighter__gear-reveal {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .hero-fighter__image {
+    position: absolute;
+    inset: auto 0 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    user-select: none;
+    pointer-events: none;
+    backface-visibility: hidden;
+    transform-origin: 50% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+
+  .hero-fighter__image--poster {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    object-position: center top;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    filter: drop-shadow(0 11px 30px rgba(0, 0, 0, 0.42))
+      drop-shadow(0 0 12px color-mix(in srgb, var(--hero-accent) 18%, transparent));
+  }
+
+  .hero-fighter[data-render-mode='poster'] .hero-fighter__slot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .hero-fighter[data-render-mode='poster'] .hero-fighter__image--poster {
+    max-height: min(74svh, 52rem);
+  }
+
+  .hero-fighter[data-render-mode='main-event'] .hero-fighter__image--poster {
+    display: none;
+  }
+
+  .hero-fighter__image--base,
+  .hero-fighter__image--gear {
+    transform: translateY(var(--hero-overlay-shift-y)) scale(var(--hero-overlay-scale))
+      translateZ(0);
+  }
+
+  /* Capa promovida de forma explícita a la GPU */
+  .hero-fighter__image--base {
+    z-index: 2;
+    opacity: 0.88;
+    backface-visibility: hidden;
+    filter: drop-shadow(0 30px 70px rgba(0, 0, 0, 0.28));
+    -webkit-mask-image: var(--hero-bottom-fade-mask);
+    mask-image: var(--hero-bottom-fade-mask);
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+    animation: hero-base-in 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    will-change: transform, opacity;
+  }
+
+  .hero-fighter__image--gear {
+    z-index: 3;
+    opacity: 0;
+    backface-visibility: hidden;
+    mix-blend-mode: screen;
+    filter: brightness(1.04) saturate(1.03);
+    --gear-reveal-mask: linear-gradient(
+      var(--hero-reveal-angle),
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 0) calc(50% - var(--hero-reveal-core) - var(--hero-reveal-soft)),
+      rgba(0, 0, 0, 0.14) calc(50% - var(--hero-reveal-core)),
+      rgba(0, 0, 0, 0.96) 50%,
+      rgba(0, 0, 0, 0.14) calc(50% + var(--hero-reveal-core)),
+      rgba(0, 0, 0, 0) calc(50% + var(--hero-reveal-core) + var(--hero-reveal-soft)),
+      rgba(0, 0, 0, 0) 100%
+    );
+    -webkit-mask-image: var(--gear-reveal-mask);
+    mask-image: var(--gear-reveal-mask);
+    -webkit-mask-size: var(--hero-gear-mask-size);
+    mask-size: var(--hero-gear-mask-size);
+    -webkit-mask-position: var(--hero-reveal-start-x) 50%;
+    mask-position: var(--hero-reveal-start-x) 50%;
+    animation-name: hero-gear-sweep;
+    animation-duration: var(--hero-gear-cycle);
+    animation-delay: var(--hero-reveal-delay);
+    animation-timing-function: cubic-bezier(0.33, 0, 0.12, 1);
+    animation-fill-mode: both;
+    animation-iteration-count: infinite;
+    will-change: mask-position, opacity, transform;
+  }
+
+  @supports ((mask-composite: intersect) or (-webkit-mask-composite: source-in)) {
+    .hero-fighter__image--gear {
+      -webkit-mask-image: var(--gear-reveal-mask), var(--hero-bottom-fade-mask);
+      mask-image: var(--gear-reveal-mask), var(--hero-bottom-fade-mask);
+      -webkit-mask-size:
+        var(--hero-gear-mask-size),
+        100% 100%;
+      mask-size:
+        var(--hero-gear-mask-size),
+        100% 100%;
+      -webkit-mask-position:
+        var(--hero-reveal-start-x) 50%,
+        0 0;
+      mask-position:
+        var(--hero-reveal-start-x) 50%,
+        0 0;
+      -webkit-mask-repeat: no-repeat, no-repeat;
+      mask-repeat: no-repeat, no-repeat;
+      -webkit-mask-composite: source-in;
+      mask-composite: intersect;
+      animation-name: hero-gear-sweep-composite;
+    }
+  }
+
+  .hero-fighter__caption {
+    width: 100%;
+    margin-top: 0.7rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0;
+    padding-inline: 1rem;
+  }
+
+  .hero-fighter--left .hero-fighter__caption,
+  .hero-fighter--right .hero-fighter__caption {
+    align-items: center;
+    text-align: center;
+  }
+
+  .hero-fighter__role {
+    display: none;
+  }
+
+  .hero-fighter__name {
+    display: block;
+    width: 100%;
+    color: white;
+    font-size: clamp(1.15rem, 2vw, 1.7rem);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  }
+
+  .hero-fighter[data-hero-exit] {
+    opacity: calc(1 - var(--hero-exit-progress, 0));
+    transform: translateY(calc(var(--hero-exit-progress, 0) * -10svh)) translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  @keyframes hero-base-in {
+    from {
+      opacity: 0;
+      transform: translateY(2.2rem) scale(0.98) translateZ(0);
+    }
+
+    to {
+      opacity: 0.88;
+      transform: translateY(var(--hero-overlay-shift-y)) scale(var(--hero-overlay-scale))
+        translateZ(0);
+    }
+  }
+
+  @keyframes hero-float {
+    0%,
+    100% {
+      transform: translateY(var(--hero-media-rest-y)) scale(1) translateZ(0);
+    }
+
+    50% {
+      transform: translateY(calc(var(--hero-media-rest-y) - var(--hero-float-y)))
+        scale(var(--hero-float-scale)) translateZ(0);
+    }
+  }
+
+  @keyframes hero-gear-sweep {
+    0%,
+    14% {
+      opacity: 0;
+      -webkit-mask-position: var(--hero-reveal-start-x) 50%;
+      mask-position: var(--hero-reveal-start-x) 50%;
+    }
+
+    22% {
+      opacity: 0.22;
+    }
+
+    42% {
+      opacity: 0.96;
+      -webkit-mask-position: var(--hero-reveal-mid-x) 50%;
+      mask-position: var(--hero-reveal-mid-x) 50%;
+    }
+
+    70%,
+    100% {
+      opacity: 0;
+      -webkit-mask-position: var(--hero-reveal-end-x) 50%;
+      mask-position: var(--hero-reveal-end-x) 50%;
+    }
+  }
+
+  @keyframes hero-gear-sweep-composite {
+    0%,
+    14% {
+      opacity: 0;
+      -webkit-mask-position:
+        var(--hero-reveal-start-x) 50%,
+        0 0;
+      mask-position:
+        var(--hero-reveal-start-x) 50%,
+        0 0;
+    }
+
+    22% {
+      opacity: 0.22;
+    }
+
+    42% {
+      opacity: 0.96;
+      -webkit-mask-position:
+        var(--hero-reveal-mid-x) 50%,
+        0 0;
+      mask-position:
+        var(--hero-reveal-mid-x) 50%,
+        0 0;
+    }
+
+    70%,
+    100% {
+      opacity: 0;
+      -webkit-mask-position:
+        var(--hero-reveal-end-x) 50%,
+        0 0;
+      mask-position:
+        var(--hero-reveal-end-x) 50%,
+        0 0;
+    }
+  }
+
+  @supports not (
+    (mask-image: linear-gradient(black, transparent)) or
+      (-webkit-mask-image: linear-gradient(black, transparent))
+  ) {
+    .hero-fighter__image--gear {
+      -webkit-mask-image: none;
+      mask-image: none;
+      clip-path: polygon(0 0, 58% 0, 40% 100%, 0 100%);
+      opacity: 0;
+      animation-name: hero-gear-clip-sweep;
+      animation-duration: var(--hero-gear-cycle);
+      animation-delay: var(--hero-reveal-delay);
+      animation-timing-function: cubic-bezier(0.33, 0, 0.12, 1);
+      animation-fill-mode: both;
+      animation-iteration-count: infinite;
+    }
+
+    .hero-fighter--right .hero-fighter__image--gear {
+      clip-path: polygon(42% 0, 100% 0, 100% 100%, 60% 100%);
+    }
+
+    @keyframes hero-gear-clip-sweep {
+      0%,
+      14% {
+        opacity: 0;
+      }
+
+      22% {
+        opacity: 0.2;
+      }
+
+      42% {
+        opacity: 0.82;
+      }
+
+      70%,
+      100% {
+        opacity: 0;
+      }
+    }
+  }
+
+  @media (min-width: 640px) {
+    .hero-logo__image {
+      width: 22.5rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .hero-logo__image {
+      width: 25rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .hero-logo__image {
+      width: 30rem;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    .story-panel--hero {
+      --hero-shell-padding-top: clamp(0.9rem, 1.55vw, 1.18rem);
+      --hero-shell-padding-bottom: clamp(0.32rem, 0.7vw, 0.52rem);
+      --hero-shell-footer-gap: clamp(0.38rem, 0.85vh, 0.7rem);
+    }
+
+    .hero-stage__center-shell {
+      width: min(100%, 54rem);
+      max-width: 54rem;
+    }
+
+    .hero-stage__selector {
+      width: min(100%, 50rem);
+    }
+  }
+
+  @media (max-width: 960px) {
+    .story-panel--hero {
+      --hero-shell-padding-top: clamp(0.72rem, 1.2vw, 0.95rem);
+      --hero-shell-padding-bottom: clamp(0.28rem, 0.6vw, 0.45rem);
+      --hero-shell-footer-gap: clamp(0.28rem, 0.7vh, 0.5rem);
+    }
+
+    .hero-scroll-scene {
+      min-height: 340svh;
+    }
+
+    .hero-stage {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        'left'
+        'center'
+        'right';
+      gap: 1.2rem;
+      min-height: auto;
+      height: auto;
+    }
+
+    .hero-fighter--left {
+      grid-area: left;
+    }
+    .hero-fighter--right {
+      grid-area: right;
+    }
+    .hero-stage__center-shell {
+      grid-area: center;
+    }
+
+    .hero-stage__center-shell {
+      width: min(100%, 42rem);
+      max-width: 42rem;
+      margin-inline: auto;
+    }
+
+    .hero-stage__selector {
+      width: min(100%, 40rem);
+    }
+  }
+
+  @media (max-width: 639.98px) {
+    .story-panel--hero {
+      --hero-shell-padding-top: calc(env(safe-area-inset-top, 0px) + 2vh);
+      --hero-shell-padding-bottom: 0px;
+      --hero-shell-footer-gap: 0.5rem;
+
+      --hero-center-content-gap: 0px !important;
+      --hero-logo-margin-top: 0px !important;
+      --hero-logo-margin-bottom: 0px !important;
+      --hero-selector-rest-offset: 0px !important;
+      --hero-center-raise: 0px !important;
+    }
+
+    .hero-stage {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas:
+        'center center'
+        'left right';
+      gap: 0.1rem 0px !important;
+    }
+
+    .hero-stage__center-shell {
+      align-self: start;
+      margin-top: 0;
+      margin-bottom: 0;
+      width: 100%;
+      max-width: 100%;
+      z-index: 10;
+    }
+
+    .hero-stage__selector-shell {
+      width: calc(100% + 1rem) !important;
+      margin-left: -0.5rem !important;
+      margin-right: -0.5rem !important;
+      padding-inline: 0px !important;
+    }
+
+    .hero-stage__selector {
+      width: 100%;
+      margin-inline: auto;
+    }
+
+    .hero-fighter--left,
+    .hero-fighter--right {
+      align-self: end;
+      min-height: auto;
+      justify-content: center;
+    }
+
+    .hero-fighter__media {
+      height: clamp(18.5rem, 46vh, 26rem);
+      width: 100%;
+      aspect-ratio: auto;
+      --hero-media-rest-y: -0.75rem;
+      --hero-overlay-shift-y: 0.8rem;
+      --hero-overlay-scale: 1.02;
+    }
+
+    .hero-fighter--left .hero-fighter__stack {
+      width: 145%;
+      margin-left: -50%;
+      transform: none;
+    }
+
+    .hero-fighter--right .hero-fighter__stack {
+      width: 145%;
+      margin-right: -50%;
+      margin-left: auto;
+      transform: none;
+    }
+
+    .hero-fighter__image {
+      object-position: center bottom;
+    }
+
+    .hero-fighter__image--poster {
+      height: 100%;
+      max-height: none;
+    }
+
+    .hero-logo {
+      transform: none !important;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: -1.2rem !important;
+    }
+
+    .hero-logo__image {
+      width: clamp(250px, 75vw, 340px) !important;
+      height: auto !important;
+    }
+
+    .hero-event-meta {
+      font-size: 0.65rem;
+      line-height: 1.2;
+      margin-bottom: 0.2rem !important;
+    }
+
+    .hero-fighter__caption {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html:focus-within {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .story-panel {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    .hero-scroll-scene {
+      min-height: auto !important;
+    }
+
+    .hero-scroll-sticky {
+      position: relative;
+      min-height: auto;
+      overflow: visible;
+    }
+
+    .hero-stage__poster {
+      display: none;
+    }
+
+    .hero-stage__center-shell,
+    .hero-stage__center-content,
+    .hero-fighter[data-hero-exit] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    .hero-stage__center-content {
+      pointer-events: none;
+    }
+
+    .hero-stage__selector-shell {
+      opacity: 1 !important;
+      transform: none !important;
+      width: 100%;
+      pointer-events: auto;
+    }
+
+    .hero-fighter__media {
+      transform: translateY(var(--hero-media-rest-y)) translateZ(0) !important;
+    }
+
+    .hero-fighter__image--gear {
+      opacity: 0.22 !important;
+      mix-blend-mode: normal;
+      clip-path: none !important;
+      -webkit-mask-image: none !important;
+      mask-image: none !important;
+      filter: drop-shadow(0 30px 70px rgba(0, 0, 0, 0.28)) !important;
+      transform: translateY(var(--hero-overlay-shift-y)) scale(var(--hero-overlay-scale))
+        translateZ(0) !important;
+    }
+  }
+</style>
